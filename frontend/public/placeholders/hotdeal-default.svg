@@ -1,0 +1,11 @@
+<svg width="800" height="1000" viewBox="0 0 800 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="1000" fill="#F4F7F2"/>
+  <rect x="64" y="64" width="672" height="872" rx="20" fill="#FFFFFF"/>
+  <rect x="120" y="120" width="560" height="420" rx="28" fill="#E8F4EF"/>
+  <circle cx="290" cy="320" r="110" fill="#125B50"/>
+  <rect x="380" y="220" width="170" height="180" rx="24" fill="#F77F00"/>
+  <rect x="144" y="612" width="176" height="34" rx="8" fill="#DCEBE7"/>
+  <rect x="144" y="668" width="512" height="46" rx="8" fill="#14213D"/>
+  <rect x="144" y="740" width="300" height="42" rx="8" fill="#35B15A"/>
+  <text x="144" y="840" fill="#64748B" font-family="Arial, sans-serif" font-size="30" font-weight="700">Temporary Hotdeal Image</text>
+</svg>

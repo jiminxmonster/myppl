@@ -1,0 +1,10 @@
+<svg width="800" height="1000" viewBox="0 0 800 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="1000" fill="#F7F5EF"/>
+  <rect x="72" y="72" width="656" height="856" rx="22" fill="#FFFFFF"/>
+  <circle cx="280" cy="340" r="130" fill="#D9E7DC"/>
+  <rect x="360" y="200" width="170" height="360" rx="30" fill="#125B50"/>
+  <rect x="540" y="220" width="64" height="280" rx="32" fill="#F77F00"/>
+  <rect x="152" y="650" width="210" height="36" rx="8" fill="#E5E7EB"/>
+  <rect x="152" y="710" width="500" height="48" rx="8" fill="#14213D"/>
+  <text x="152" y="830" fill="#64748B" font-family="Arial, sans-serif" font-size="32" font-weight="700">Sports Marketplace Image</text>
+</svg>

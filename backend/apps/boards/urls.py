@@ -1,0 +1,48 @@
+from django.urls import path
+
+from .admin_views import AdminBoardDetailView, AdminBoardListCreateView, AdminBoardReorderView, AdminBoardToggleVisibilityView
+from .search_views import UnifiedSearchView
+from .views import (
+    AdminPostBlindView,
+    AdminPostDeleteView,
+    AdminPostListView,
+    AdminPostMoveView,
+    AdminKeywordFilterDetailView,
+    AdminKeywordFilterListCreateView,
+    AdminPostNoticeView,
+    AdminReportHandleView,
+    AdminReportListView,
+    BoardDetailView,
+    BoardListView,
+    CommentDetailView,
+    CommentListCreateView,
+    PostDetailView,
+    PostLikeView,
+    PostListCreateView,
+    ReportCreateView,
+)
+
+urlpatterns = [
+    path("boards/", BoardListView.as_view(), name="board_list"),
+    path("boards/<str:slug>/", BoardDetailView.as_view(), name="board_detail"),
+    path("admin/boards/", AdminBoardListCreateView.as_view(), name="admin_board_list_create"),
+    path("admin/boards/reorder/", AdminBoardReorderView.as_view(), name="admin_board_reorder"),
+    path("admin/boards/<int:board_id>/", AdminBoardDetailView.as_view(), name="admin_board_detail"),
+    path("admin/boards/<int:board_id>/toggle-visibility/", AdminBoardToggleVisibilityView.as_view(), name="admin_board_toggle_visibility"),
+    path("admin/posts/<int:post_id>/blind/", AdminPostBlindView.as_view(), name="admin_post_blind"),
+    path("admin/posts/<int:post_id>/notice/", AdminPostNoticeView.as_view(), name="admin_post_notice"),
+    path("admin/posts/", AdminPostListView.as_view(), name="admin_post_list"),
+    path("admin/posts/<int:post_id>/move/", AdminPostMoveView.as_view(), name="admin_post_move"),
+    path("admin/posts/<int:post_id>/delete/", AdminPostDeleteView.as_view(), name="admin_post_delete"),
+    path("admin/keywords/", AdminKeywordFilterListCreateView.as_view(), name="admin_keyword_list_create"),
+    path("admin/keywords/<int:keyword_id>/", AdminKeywordFilterDetailView.as_view(), name="admin_keyword_detail"),
+    path("admin/reports/", AdminReportListView.as_view(), name="admin_report_list"),
+    path("admin/reports/<int:report_id>/handle/", AdminReportHandleView.as_view(), name="admin_report_handle"),
+    path("boards/<str:slug>/posts/", PostListCreateView.as_view(), name="post_list_create"),
+    path("search/", UnifiedSearchView.as_view(), name="unified_search"),
+    path("posts/<int:post_id>/", PostDetailView.as_view(), name="post_detail"),
+    path("posts/<int:post_id>/like/", PostLikeView.as_view(), name="post_like"),
+    path("posts/<int:post_id>/comments/", CommentListCreateView.as_view(), name="comment_list_create"),
+    path("comments/<int:comment_id>/", CommentDetailView.as_view(), name="comment_detail"),
+    path("reports/", ReportCreateView.as_view(), name="report_create"),
+]

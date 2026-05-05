@@ -1,0 +1,9 @@
+<svg width="800" height="1000" viewBox="0 0 800 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="1000" fill="#F4F8F2"/>
+  <rect x="72" y="72" width="656" height="856" rx="22" fill="#FFFFFF"/>
+  <circle cx="300" cy="360" r="150" fill="#125B50"/>
+  <rect x="400" y="220" width="180" height="320" rx="90" transform="rotate(18 400 220)" fill="#F77F00"/>
+  <rect x="150" y="640" width="220" height="36" rx="8" fill="#DCEBE7"/>
+  <rect x="150" y="700" width="470" height="48" rx="8" fill="#14213D"/>
+  <text x="150" y="820" fill="#64748B" font-family="Arial, sans-serif" font-size="32" font-weight="700">Sports Hotdeal Image</text>
+</svg>

@@ -1,0 +1,10 @@
+<svg width="800" height="1000" viewBox="0 0 800 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="1000" fill="#F8F6F1"/>
+  <rect x="72" y="72" width="656" height="856" rx="22" fill="#FFFFFF"/>
+  <rect x="120" y="140" width="560" height="420" rx="28" fill="#EEF2F7"/>
+  <rect x="170" y="210" width="460" height="280" rx="24" fill="#D7E3F4"/>
+  <rect x="152" y="626" width="180" height="34" rx="8" fill="#E2E8F0"/>
+  <rect x="152" y="680" width="520" height="48" rx="8" fill="#14213D"/>
+  <rect x="152" y="756" width="260" height="44" rx="8" fill="#35B15A"/>
+  <text x="152" y="848" fill="#64748B" font-family="Arial, sans-serif" font-size="30" font-weight="700">Temporary Market Image</text>
+</svg>

@@ -1,0 +1,29 @@
+# OS
+.DS_Store
+
+# Env
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+
+# Node
+node_modules/
+.next/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build artifacts
+staticfiles/
+media/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
