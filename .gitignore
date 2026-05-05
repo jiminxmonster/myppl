@@ -3,6 +3,7 @@
 
 # Env
 .env
+.env.*
 
 # Python
 __pycache__/
@@ -27,3 +28,6 @@ build/
 # IDE
 .idea/
 .vscode/
+
+# Local automation artifacts
+.playwright-mcp/

@@ -145,6 +145,7 @@ CELERY_BEAT_SCHEDULE = {
 
 # 개발 환경에서는 로컬 파일 저장소를, 운영 환경에서는 S3 호환 스토리지를 사용할 수 있게 분기한다.
 USE_S3_STORAGE = config("USE_S3_STORAGE", default=False, cast=bool)
+USE_GCS_STORAGE = config("USE_GCS_STORAGE", default=False, cast=bool)
 AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")
 AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
 AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="")
@@ -153,6 +154,13 @@ AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="ewr1")
 AWS_DEFAULT_ACL = None
 AWS_QUERYSTRING_AUTH = False
 AWS_S3_FILE_OVERWRITE = False
+GS_BUCKET_NAME = config("GS_BUCKET_NAME", default="")
+GS_PROJECT_ID = config("GS_PROJECT_ID", default="")
+GS_LOCATION = config("GS_LOCATION", default="")
+GS_DEFAULT_ACL = None
+GS_QUERYSTRING_AUTH = config("GS_QUERYSTRING_AUTH", default=False, cast=bool)
+GS_FILE_OVERWRITE = config("GS_FILE_OVERWRITE", default=False, cast=bool)
+GS_CUSTOM_ENDPOINT = config("GS_CUSTOM_ENDPOINT", default="")
 
 # 쿠팡 판매자 Open API 실연동 설정이다.
 COUPANG_ACCESS_KEY = config("COUPANG_ACCESS_KEY", default="")
@@ -167,7 +175,28 @@ NOTIFICATION_KAKAO_WEBHOOK_URL = config("NOTIFICATION_KAKAO_WEBHOOK_URL", defaul
 NOTIFICATION_SMS_WEBHOOK_URL = config("NOTIFICATION_SMS_WEBHOOK_URL", default="")
 NOTIFICATION_DELIVERY_TIMEOUT = config("NOTIFICATION_DELIVERY_TIMEOUT", default=8, cast=int)
 
-if USE_S3_STORAGE and AWS_STORAGE_BUCKET_NAME and AWS_S3_ENDPOINT_URL:
+if USE_GCS_STORAGE and GS_BUCKET_NAME:
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+            "OPTIONS": {
+                "bucket_name": GS_BUCKET_NAME,
+                "project_id": GS_PROJECT_ID or None,
+                "location": GS_LOCATION or None,
+                "default_acl": GS_DEFAULT_ACL,
+                "querystring_auth": GS_QUERYSTRING_AUTH,
+                "file_overwrite": GS_FILE_OVERWRITE,
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+    if GS_CUSTOM_ENDPOINT:
+        MEDIA_URL = f"{GS_CUSTOM_ENDPOINT.rstrip('/')}/{GS_BUCKET_NAME}/"
+    else:
+        MEDIA_URL = f"https://storage.googleapis.com/{GS_BUCKET_NAME}/"
+elif USE_S3_STORAGE and AWS_STORAGE_BUCKET_NAME and AWS_S3_ENDPOINT_URL:
     STORAGES = {
         "default": {
             "BACKEND": "storages.backends.s3.S3Storage",
