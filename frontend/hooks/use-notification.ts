@@ -5,6 +5,27 @@ import { useEffect, useMemo, useState } from "react";
 import { getNotifications, markNotificationAsRead, NotificationItem } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 
+function resolveWebSocketBaseUrl() {
+  if (process.env.NEXT_PUBLIC_WS_URL) {
+    return process.env.NEXT_PUBLIC_WS_URL.replace(/\/$/, "");
+  }
+
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    try {
+      const apiUrl = new URL(process.env.NEXT_PUBLIC_API_URL);
+      apiUrl.protocol = apiUrl.protocol === "https:" ? "wss:" : "ws:";
+      apiUrl.pathname = "/ws";
+      apiUrl.search = "";
+      apiUrl.hash = "";
+      return apiUrl.toString().replace(/\/$/, "");
+    } catch {
+      // Fall through to the local development default.
+    }
+  }
+
+  return "ws://localhost:8000/ws";
+}
+
 export function useNotification() {
   const user = useAuthStore((state) => state.user);
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -25,7 +46,7 @@ export function useNotification() {
 
     load();
 
-    const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000/ws";
+    const wsBase = resolveWebSocketBaseUrl();
     socket = new WebSocket(`${wsBase}/notifications/?user_id=${user.id}`);
 
     socket.onmessage = (event) => {
