@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { SafeImage } from "@/components/common/safe-image";
 import { PageNavigator } from "@/components/layout/page-navigator";
 import { SideCategoryMenu } from "@/components/layout/side-category-menu";
 import { ProductsActionBar } from "@/components/products/products-action-bar";
@@ -158,7 +159,7 @@ export default async function ProductsPage({
                   className="overflow-hidden rounded-[0.67rem] border border-[var(--border)] bg-white shadow-soft transition hover:-translate-y-1"
                 >
                   <div className="flex aspect-square items-center justify-center bg-[var(--muted)]/30 p-3 sm:aspect-[5/4] sm:p-5">
-                    <img src={item.image} alt={item.title} className="h-full w-full object-contain" />
+                    <SafeImage src={item.image} alt={item.title} className="h-full w-full object-contain" seed={`${item.kind}-${item.id}-${item.title}`} />
                   </div>
                   <div className="space-y-2 p-3 sm:p-5">
                     <div className="flex items-center justify-between gap-3">

@@ -32,36 +32,73 @@ export default async function HomePage() {
     sellerBoard ? getBoardPosts(sellerBoard.slug).catch(() => []) : Promise.resolve([]),
   ]);
 
+  const heroFallbackImages = [
+    "/branding/promotion_001.png",
+    "/branding/hero_seed_02.svg",
+    "/branding/hero_seed_03.svg",
+    "/branding/hero_seed_04.svg",
+  ];
+
   const configuredHeroSlides = heroSlides
     .filter((slide) => slide.is_active)
-    .map((slide) => ({
-      ...slide,
-      href: slide.href || undefined,
-      image: resolveMediaUrl(slide.image),
-      badge: slide.badge || "광고",
-      display_seconds: slide.display_seconds || 3,
-      transition_style: (slide.transition_style || "next") as
-        | "next"
-        | "slide_lr"
-        | "slide_ud"
-        | "fade"
-        | "mosaic"
-        | "zoom"
-        | "rotate"
-        | "flip"
-        | "wipe"
-        | "cinema",
-    }));
+    .map((slide, index) => {
+      const resolvedImage = resolveMediaUrl(slide.image);
+      return {
+        ...slide,
+        href: slide.href || undefined,
+        image: resolvedImage || heroFallbackImages[index % heroFallbackImages.length],
+        badge: slide.badge || "광고",
+        display_seconds: slide.display_seconds || 3,
+        transition_style: (slide.transition_style || "next") as
+          | "next"
+          | "slide_lr"
+          | "slide_ud"
+          | "fade"
+          | "mosaic"
+          | "zoom"
+          | "rotate"
+          | "flip"
+          | "wipe"
+          | "cinema",
+      };
+    });
 
   const fallbackHeroSlides = [
     {
-      id: "hero-fallback",
-      title: "myPPL과 함께 상품을 빠르게 찾으세요",
-      description: "새로운 혜택과 장터 공지를 확인하세요.",
-      image: "/branding/promotion_001.png",
+      id: "hero-fallback-1",
+      title: "myPPL 메인 프로모션",
+      description: "실시간 인기 상품과 신규 등록 소식을 바로 확인하세요.",
+      image: heroFallbackImages[0],
       badge: "광고",
-      display_seconds: 5,
+      display_seconds: 4,
       transition_style: "next",
+    },
+    {
+      id: "hero-fallback-2",
+      title: "판매자 추천 핫딜",
+      description: "조회수 높은 상품을 빠르게 비교해 보고 바로 이동하세요.",
+      image: heroFallbackImages[1],
+      badge: "광고",
+      display_seconds: 4,
+      transition_style: "slide_lr",
+    },
+    {
+      id: "hero-fallback-3",
+      title: "중고장터 베스트",
+      description: "검토 완료된 인기 중고상품을 카테고리별로 확인할 수 있습니다.",
+      image: heroFallbackImages[2],
+      badge: "광고",
+      display_seconds: 4,
+      transition_style: "fade",
+    },
+    {
+      id: "hero-fallback-4",
+      title: "커뮤니티 지금 화제글",
+      description: "구매자/판매자 커뮤니티 최신 글을 한 번에 살펴보세요.",
+      image: heroFallbackImages[3],
+      badge: "광고",
+      display_seconds: 4,
+      transition_style: "wipe",
     },
   ];
 

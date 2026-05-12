@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="540" viewBox="0 0 1920 540" fill="none">
+  <defs>
+    <linearGradient id="g2" x1="0" y1="0" x2="1920" y2="540" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F766E"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="540" fill="url(#g2)"/>
+  <circle cx="1550" cy="120" r="260" fill="white" fill-opacity="0.08"/>
+  <circle cx="300" cy="470" r="220" fill="white" fill-opacity="0.08"/>
+  <text x="130" y="220" fill="white" font-size="78" font-family="Pretendard, sans-serif" font-weight="700">판매자 추천 핫딜</text>
+  <text x="130" y="300" fill="#E2E8F0" font-size="38" font-family="Pretendard, sans-serif">조회수 높은 상품을 빠르게 비교해 보세요.</text>
+</svg>

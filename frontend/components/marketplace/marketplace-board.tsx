@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { MapPin, Heart, Package2 } from "lucide-react";
 
+import { SafeImage } from "@/components/common/safe-image";
 import { getProductPlaceholder, MarketplaceItem, resolveMediaUrl } from "@/lib/api";
 
 type MarketplaceBoardProps = {
@@ -25,10 +26,11 @@ export function MarketplaceBoard({ initialItems }: MarketplaceBoardProps) {
         <article key={item.id} className="overflow-hidden border border-[var(--border)] bg-white shadow-soft transition-transform hover:-translate-y-1">
           <Link href={`/marketplace/${item.id}`} className="block">
             <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden bg-[#f5f6f8]">
-              <img
+              <SafeImage
                 src={resolveMediaUrl(item.image || item.external_image_url || getProductPlaceholder("marketplace", item.category_name))}
                 alt={`${item.title} 대표 이미지`}
                 className="h-full w-full object-cover"
+                seed={`market-${item.id}-${item.title}`}
               />
               <div className="absolute left-4 top-4 rounded-[5px] bg-white px-3 py-1 text-xs font-semibold text-slate-900 shadow-sm">
                 {item.category_name ?? "중고장터"}

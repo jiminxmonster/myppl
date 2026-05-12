@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Clock3, Heart, Star } from "lucide-react";
 
+import { SafeImage } from "@/components/common/safe-image";
 import { getProductPlaceholder, Hotdeal, resolveMediaUrl } from "@/lib/api";
 
 type HotdealBoardProps = {
@@ -25,10 +26,11 @@ export function HotdealBoard({ initialItems }: HotdealBoardProps) {
         <article key={item.id} className="overflow-hidden border border-[var(--border)] bg-white shadow-soft transition-transform hover:-translate-y-1">
           <Link href={`/hotdeals/${item.id}`} className="block">
             <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden bg-[#f3f7f5]">
-              <img
+              <SafeImage
                 src={item.image ? resolveMediaUrl(item.image) : getProductPlaceholder("hotdeal", item.category_name)}
                 alt={`${item.title} 대표 이미지`}
                 className="h-full w-full object-cover"
+                seed={`hotdeal-${item.id}-${item.title}`}
               />
               <div className="absolute left-4 top-4 flex items-center gap-2 rounded-[5px] bg-white px-3 py-1 text-xs font-semibold text-slate-900 shadow-sm">
                 <span>{item.status === "expired" ? "마감" : "핫딜"}</span>

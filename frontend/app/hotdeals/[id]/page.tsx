@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { SafeImage } from "@/components/common/safe-image";
 import { PageNavigator } from "@/components/layout/page-navigator";
 import { SideCategoryMenu } from "@/components/layout/side-category-menu";
 import { getHotdealCategories, getHotdealDetail, getProductPlaceholder, resolveMediaUrl } from "@/lib/api";
@@ -46,10 +47,11 @@ export default async function HotdealDetailPage({ params }: HotdealDetailPagePro
           <p className="mt-3 text-sm text-slate-600">{hotdeal.author_nickname} · {new Date(hotdeal.created_at).toLocaleString("ko-KR")}</p>
         </div>
         <div className="mt-6 flex h-80 w-full items-center justify-center rounded-[5px] border border-[var(--border)] bg-[var(--muted)] p-4">
-          <img
+          <SafeImage
             src={hotdeal.image ? resolveMediaUrl(hotdeal.image) : getProductPlaceholder("hotdeal", hotdeal.category_name)}
             alt={`${hotdeal.title} 대표 이미지`}
             className="h-full w-full object-contain"
+            seed={`hotdeal-detail-${hotdeal.id}-${hotdeal.title}`}
           />
         </div>
         <p className="mt-6 text-base leading-7 text-slate-700">{hotdeal.description}</p>

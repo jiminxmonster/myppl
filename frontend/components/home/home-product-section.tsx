@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { SafeImage } from "@/components/common/safe-image";
 
 type HomeProductCard = {
   id: number;
@@ -171,7 +172,7 @@ export function HomeProductSection({
                       임시 상품 슬롯
                     </div>
                   ) : (
-                    <img src={item.image} alt={item.title} className="h-full w-full object-contain" />
+                    <SafeImage src={item.image} alt={item.title} className="h-full w-full object-contain" seed={item.title} />
                   )}
                 </div>
                 <div className="space-y-2 p-4 sm:p-5">

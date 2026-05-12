@@ -141,7 +141,7 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
       ref={incomingRef}
       className="hero-slide relative z-[2] min-h-[320px] overflow-hidden px-8 py-10 text-white"
       style={{
-        backgroundImage: `linear-gradient(90deg, rgba(15, 23, 42, 0.72) 0%, rgba(15, 23, 42, 0.5) 34%, rgba(15, 23, 42, 0.12) 70%, rgba(15, 23, 42, 0.04) 100%), url(${active.image})`,
+        backgroundImage: `url(${active.image})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
@@ -151,8 +151,8 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
     >
       <div className="flex min-h-[300px] max-w-xl flex-col justify-between">
         <div>
-          <h1 className="max-w-2xl text-4xl font-black tracking-tight">{active.title}</h1>
-          <p className="mt-4 max-w-xl text-sm leading-7 text-white/85">{active.description}</p>
+          <h1 className="max-w-2xl text-4xl font-black tracking-tight [text-shadow:0_2px_14px_rgba(15,23,42,0.45)]">{active.title}</h1>
+          <p className="mt-4 max-w-xl text-sm leading-7 text-white/90 [text-shadow:0_1px_10px_rgba(15,23,42,0.45)]">{active.description}</p>
         </div>
       </div>
     </div>
@@ -178,7 +178,7 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
               ref={outgoingRef}
               className="absolute inset-0 z-[1]"
               style={{
-                backgroundImage: `linear-gradient(90deg, rgba(15, 23, 42, 0.72) 0%, rgba(15, 23, 42, 0.5) 34%, rgba(15, 23, 42, 0.12) 70%, rgba(15, 23, 42, 0.04) 100%), url(${outgoing.image})`,
+                backgroundImage: `url(${outgoing.image})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 backgroundRepeat: "no-repeat",
@@ -194,7 +194,7 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
               ref={outgoingRef}
               className="absolute inset-0 z-[1]"
               style={{
-                backgroundImage: `linear-gradient(90deg, rgba(15, 23, 42, 0.72) 0%, rgba(15, 23, 42, 0.5) 34%, rgba(15, 23, 42, 0.12) 70%, rgba(15, 23, 42, 0.04) 100%), url(${outgoing.image})`,
+                backgroundImage: `url(${outgoing.image})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 backgroundRepeat: "no-repeat",

@@ -297,6 +297,7 @@ export default function AdminHeroSectionsPage() {
           <div>
             <h2 className="text-xl font-bold text-[var(--ink)]">히어로섹션 관리</h2>
             <p className="mt-2 text-sm text-slate-600">히어로 화면전환 방식과 노출 시간을 설정하고, 전체 적용으로 즉시 반영합니다.</p>
+            <p className="mt-1 text-xs text-slate-500">이미지 최적화 권장: 1920 x 540px (16:4.5), JPG/PNG, 2MB 이하</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -362,10 +363,11 @@ export default function AdminHeroSectionsPage() {
                   ) : (
                     <>
                       <p className="text-sm font-semibold text-[var(--ink)]">썸네일이미지</p>
-                      <p className="mt-2 text-xs text-slate-500">권장 1920 x 540 +</p>
+                      <p className="mt-2 text-xs text-slate-500">권장 1920 x 540px</p>
                     </>
                   )}
                 </label>
+                <p className="mt-2 text-center text-xs text-slate-500">최적화: 1920 x 540px / JPG, PNG / 2MB 이하</p>
               </div>
 
               <div className="space-y-2">

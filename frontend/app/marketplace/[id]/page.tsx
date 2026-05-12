@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
+import { SafeImage } from "@/components/common/safe-image";
 import { PageNavigator } from "@/components/layout/page-navigator";
 import { MarketplaceDetailActions } from "@/components/marketplace/marketplace-detail-actions";
 import { getMarketplaceDetail, getProductPlaceholder, MarketplaceItem, resolveMediaUrl } from "@/lib/api";
@@ -74,10 +75,11 @@ export default function MarketplaceDetailPage() {
           {item.author_nickname} · {item.region} · {new Date(item.created_at).toLocaleString("ko-KR")}
         </p>
         <div className="mt-6 flex h-80 w-full items-center justify-center rounded-[5px] border border-[var(--border)] bg-[var(--muted)] p-4">
-          <img
+          <SafeImage
             src={resolveMediaUrl(item.image || item.external_image_url || getProductPlaceholder("marketplace", item.category_name))}
             alt={`${item.title} 대표 이미지`}
             className="h-full w-full object-contain"
+            seed={`market-detail-${item.id}-${item.title}`}
           />
         </div>
         <p className="mt-6 text-base leading-7 text-slate-700">{item.description}</p>
