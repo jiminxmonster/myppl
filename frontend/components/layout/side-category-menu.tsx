@@ -111,7 +111,7 @@ export function SideCategoryMenu({
         isActive: isBaseRoute && !selectedCategory,
       },
       ...flatCategories.map((category) => ({
-        id: String(category.id),
+        id: `category-${category.slug}-${category.id}`,
         name: category.name,
         description: "",
         href: `${basePath}?category=${encodeURIComponent(category.slug)}`,
@@ -123,7 +123,7 @@ export function SideCategoryMenu({
   );
   const collapsedRailStyle = useMemo(
     () => ({
-      left: "max(0.75rem, calc((100vw - 80rem) / 2 + 14.5rem))",
+      right: "max(0.75rem, calc((100vw - 80rem) / 2 + 2rem))",
     }),
     []
   );
@@ -266,7 +266,7 @@ export function SideCategoryMenu({
                 const isActive = selectedCategory === category.slug;
                 return (
                   <Link
-                    key={`${group.id}-${category.id}`}
+                    key={`${group.id}-${category.slug}-${category.id}`}
                     href={`${basePath}?category=${encodeURIComponent(category.slug)}`}
                     className={`block rounded-[5px] border px-4 py-3 text-sm font-medium transition ${
                       isActive ? "border-white bg-white/15" : "border-white/10 hover:bg-white/10"
@@ -282,7 +282,7 @@ export function SideCategoryMenu({
             const isActive = selectedCategory === category.slug;
             return (
               <Link
-                key={category.id}
+                key={`${category.slug}-${category.id}`}
                 href={`${basePath}?category=${encodeURIComponent(category.slug)}`}
                 className={`block rounded-[5px] border px-4 py-3 text-sm font-medium transition ${
                   isActive ? "border-white bg-white/15" : "border-white/10 hover:bg-white/10"
@@ -319,7 +319,7 @@ export function SideCategoryMenu({
                 const Icon = getCategoryIcon(category.name);
                 return (
                   <Link
-                    key={category.id}
+                    key={`${category.slug}-${category.id}`}
                     href={`${basePath}?category=${encodeURIComponent(category.slug)}`}
                     className={`flex min-h-[70px] flex-col items-center justify-center gap-2 rounded-[5px] border px-2 py-3 text-center text-[10px] font-medium ${
                       isActive ? "border-white bg-white/15 text-white" : "border-white/15 bg-white/5 text-white"
@@ -352,7 +352,7 @@ export function SideCategoryMenu({
                         <Icon className="h-4 w-4" />
                         <span className="line-clamp-2 px-1">{item.name}</span>
                       </Link>
-                      <div className="pointer-events-none absolute left-[106px] top-1/2 hidden w-60 -translate-y-1/2 rounded-[5px] border border-[var(--border)] bg-white p-4 text-slate-700 shadow-soft group-hover:block">
+                      <div className="pointer-events-none absolute right-[106px] top-1/2 hidden w-60 -translate-y-1/2 rounded-[5px] border border-[var(--border)] bg-white p-4 text-slate-700 shadow-soft group-hover:block">
                         <p className="text-sm font-bold text-[var(--ink)]">{item.name}</p>
                         <p className="mt-1 text-xs leading-5 text-slate-500">{item.description}</p>
                       </div>

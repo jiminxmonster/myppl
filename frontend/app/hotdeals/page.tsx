@@ -28,7 +28,10 @@ export default async function HotdealsPage({
         ]}
         actions={<HotdealActionBar />}
       />
-      <div className="grid min-h-0 flex-1 items-stretch gap-3 overflow-hidden xl:gap-6 grid-cols-[92px_minmax(0,1fr)] xl:grid-cols-[280px_1fr]">
+      <div className="grid min-h-0 flex-1 items-stretch gap-3 overflow-hidden xl:gap-6 grid-cols-[minmax(0,1fr)_92px] xl:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="min-h-0 overflow-y-auto pr-2">
+          <HotdealBoard initialItems={items} />
+        </div>
         <SideCategoryMenu
           title="핫딜 카테고리"
           description="핫딜은 상품군별로 묶어서 빠르게 훑어볼 수 있게 정리합니다."
@@ -36,9 +39,6 @@ export default async function HotdealsPage({
           categories={categories}
           refreshSource="hotdeal"
         />
-        <div className="min-h-0 overflow-y-auto pr-2">
-          <HotdealBoard initialItems={items} />
-        </div>
       </div>
     </section>
   );
