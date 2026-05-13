@@ -3,7 +3,7 @@ import Link from "next/link";
 import { SafeImage } from "@/components/common/safe-image";
 import { PageNavigator } from "@/components/layout/page-navigator";
 import { SideCategoryMenu } from "@/components/layout/side-category-menu";
-import { getHotdealCategories, getHotdealDetail, getProductPlaceholder, resolveMediaUrl } from "@/lib/api";
+import { getHotdealCategories, getHotdealDetail, getProductPlaceholder, getSiteDisplaySettings, resolveMediaUrl } from "@/lib/api";
 
 type HotdealDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -11,9 +11,10 @@ type HotdealDetailPageProps = {
 
 export default async function HotdealDetailPage({ params }: HotdealDetailPageProps) {
   const { id } = await params;
-  const [hotdeal, categories] = await Promise.all([
+  const [hotdeal, categories, siteSettings] = await Promise.all([
     getHotdealDetail(id).catch(() => null),
     getHotdealCategories().catch(() => []),
+    getSiteDisplaySettings().catch(() => ({ show_side_category_menu: false })),
   ]);
 
   if (!hotdeal) {
@@ -32,14 +33,16 @@ export default async function HotdealDetailPage({ params }: HotdealDetailPagePro
           { label: hotdeal.title },
         ]}
       />
-      <div className="grid items-start gap-6 xl:grid-cols-[280px_1fr]">
-        <SideCategoryMenu
-          title="핫딜 카테고리"
-          description="핫딜은 상품군별로 묶어서 빠르게 훑어볼 수 있게 정리합니다."
-          basePath="/hotdeals"
-          categories={categories}
-          selectedCategorySlug={hotdeal.category_slug ?? null}
-        />
+      <div className={siteSettings.show_side_category_menu ? "grid items-start gap-6 xl:grid-cols-[280px_1fr]" : "block"}>
+        {siteSettings.show_side_category_menu ? (
+          <SideCategoryMenu
+            title="핫딜 카테고리"
+            description="핫딜은 상품군별로 묶어서 빠르게 훑어볼 수 있게 정리합니다."
+            basePath="/hotdeals"
+            categories={categories}
+            selectedCategorySlug={hotdeal.category_slug ?? null}
+          />
+        ) : null}
         <article className="space-y-6 rounded-[0.67rem] border border-[var(--border)] bg-white p-8 shadow-soft">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--brand)]">{hotdeal.status}</p>

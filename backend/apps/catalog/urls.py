@@ -12,6 +12,7 @@ from .views import (
     HomeProductSectionConfigListView,
     AdminHomeProductSectionConfigDetailView,
     AdminHomeProductSectionConfigListCreateView,
+    AdminSiteDisplaySettingView,
     AdminExternalAttributeListCreateView,
     AdminExternalCategoryListCreateView,
     AdminFilterMappingDetailView,
@@ -25,6 +26,7 @@ from .views import (
     ProductAlertSubscriptionListCreateView,
     ProductAlertSubscriptionMatchListView,
     ProductCategoryListView,
+    SiteDisplaySettingView,
     SellerOptionPresetDetailView,
     SellerOptionPresetListCreateView,
     SellerImportPreviewView,
@@ -36,6 +38,7 @@ from .views import (
 
 urlpatterns = [
     path("catalog/categories/", ProductCategoryListView.as_view(), name="catalog_category_list"),
+    path("catalog/site-settings/", SiteDisplaySettingView.as_view(), name="catalog_site_settings"),
     path("catalog/providers/", ExternalProviderListView.as_view(), name="catalog_provider_list"),
     path("catalog/home-sections/", HomeProductSectionConfigListView.as_view(), name="catalog_home_section_list"),
     path("catalog/import-preview/", SellerImportPreviewView.as_view(), name="catalog_import_preview"),
@@ -56,6 +59,7 @@ urlpatterns = [
     path("admin/catalog/reference-images/<int:reference_image_id>/", AdminCategoryReferenceImageDetailView.as_view(), name="admin_catalog_reference_image_detail"),
     path("admin/catalog/home-sections/", AdminHomeProductSectionConfigListCreateView.as_view(), name="admin_catalog_home_section_list_create"),
     path("admin/catalog/home-sections/<int:section_id>/", AdminHomeProductSectionConfigDetailView.as_view(), name="admin_catalog_home_section_detail"),
+    path("admin/catalog/site-settings/", AdminSiteDisplaySettingView.as_view(), name="admin_catalog_site_settings"),
     path("catalog/home-hero-slides/", HomeHeroSlideListView.as_view(), name="catalog_home_hero_slide_list"),
     path("admin/catalog/home-hero-slides/", AdminHomeHeroSlideListCreateView.as_view(), name="admin_catalog_home_hero_slide_list_create"),
     path("admin/catalog/home-hero-slides/reorder/", AdminHomeHeroSlideReorderView.as_view(), name="admin_catalog_home_hero_slide_reorder"),

@@ -25,6 +25,8 @@ export default function EditPostPage({ params }: EditPageProps) {
   const user = useAuthStore((state) => state.user);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [productOriginalPrice, setProductOriginalPrice] = useState("");
+  const [productSalePrice, setProductSalePrice] = useState("");
   const [images, setImages] = useState<FileList | null>(null);
   const [existingImages, setExistingImages] = useState<ExistingImageItem[]>([]);
   const [removeImageIds, setRemoveImageIds] = useState<number[]>([]);
@@ -62,6 +64,8 @@ export default function EditPostPage({ params }: EditPageProps) {
 
         setTitle(post.title);
         setContent(post.content);
+        setProductOriginalPrice(post.product_original_price ?? "");
+        setProductSalePrice(post.product_sale_price ?? "");
         setBoard(boardItem);
         setExistingImages(
           post.images.map((image) => ({
@@ -106,7 +110,14 @@ export default function EditPostPage({ params }: EditPageProps) {
     }
 
     try {
-      const post = await updatePost(params.id, { title, content, images, removeImageIds });
+      const post = await updatePost(params.id, {
+        title,
+        content,
+        images,
+        removeImageIds,
+        product_original_price: board?.board_type === "product" ? productOriginalPrice : "",
+        product_sale_price: board?.board_type === "product" ? productSalePrice : "",
+      });
       router.push(`/boards/${params.slug}/${post.id}`);
       router.refresh();
     } catch (submitError) {
@@ -131,7 +142,7 @@ export default function EditPostPage({ params }: EditPageProps) {
       <PageNavigator
         items={[
           { label: "홈", href: "/" },
-          { label: board?.slug === "notice" ? "공지" : "커뮤니티", href: board?.slug === "notice" ? "/boards/notice" : "/boards" },
+          { label: board?.slug === "notice" ? "공지" : board?.board_type === "product" ? "상품게시판" : "커뮤니티", href: board?.slug === "notice" ? "/boards/notice" : "/boards" },
           ...(board ? [{ label: board.name, href: `/boards/${params.slug}` }] : []),
           { label: "게시글 수정" },
         ]}
@@ -156,6 +167,30 @@ export default function EditPostPage({ params }: EditPageProps) {
             onChange={(event) => setContent(event.target.value)}
           />
         </label>
+        {board?.board_type === "product" ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block space-y-2">
+              <span className="text-sm font-medium">원래가격</span>
+              <input
+                type="number"
+                min={0}
+                className="w-full rounded-[5px] border border-[var(--border)] px-4 py-3 outline-none"
+                value={productOriginalPrice}
+                onChange={(event) => setProductOriginalPrice(event.target.value)}
+              />
+            </label>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium">지금가격</span>
+              <input
+                type="number"
+                min={0}
+                className="w-full rounded-[5px] border border-[var(--border)] px-4 py-3 outline-none"
+                value={productSalePrice}
+                onChange={(event) => setProductSalePrice(event.target.value)}
+              />
+            </label>
+          </div>
+        ) : null}
         {existingImages.length > 0 ? (
           <div className="space-y-3">
             <p className="text-sm font-medium">기존 이미지</p>

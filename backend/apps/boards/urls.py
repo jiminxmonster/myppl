@@ -1,7 +1,7 @@
 from django.urls import path
 
 from .admin_views import AdminBoardDetailView, AdminBoardListCreateView, AdminBoardReorderView, AdminBoardToggleVisibilityView
-from .search_views import UnifiedSearchView
+from .search_views import PopularSearchKeywordView, UnifiedSearchView
 from .views import (
     AdminPostBlindView,
     AdminPostDeleteView,
@@ -39,6 +39,7 @@ urlpatterns = [
     path("admin/reports/", AdminReportListView.as_view(), name="admin_report_list"),
     path("admin/reports/<int:report_id>/handle/", AdminReportHandleView.as_view(), name="admin_report_handle"),
     path("boards/<str:slug>/posts/", PostListCreateView.as_view(), name="post_list_create"),
+    path("search/popular-keywords/", PopularSearchKeywordView.as_view(), name="popular_search_keywords"),
     path("search/", UnifiedSearchView.as_view(), name="unified_search"),
     path("posts/<int:post_id>/", PostDetailView.as_view(), name="post_detail"),
     path("posts/<int:post_id>/like/", PostLikeView.as_view(), name="post_like"),

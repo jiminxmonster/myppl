@@ -87,6 +87,7 @@ class PostListSerializer(serializers.ModelSerializer):
     board_id = serializers.IntegerField(source="board.id", read_only=True)
     board_name = serializers.CharField(source="board.name", read_only=True)
     board_slug = serializers.CharField(source="board.slug", read_only=True)
+    board_type = serializers.CharField(source="board.board_type", read_only=True)
     notice_start = serializers.DateTimeField(read_only=True)
     notice_end = serializers.DateTimeField(read_only=True)
 
@@ -99,7 +100,10 @@ class PostListSerializer(serializers.ModelSerializer):
             "board_id",
             "board_name",
             "board_slug",
+            "board_type",
             "thumbnail_image",
+            "product_original_price",
+            "product_sale_price",
             "is_deleted",
             "is_blinded",
             "is_notice",
@@ -137,6 +141,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
     """게시글 상세 응답 직렬화기."""
 
     author_nickname = serializers.CharField(source="author.nickname", read_only=True)
+    board_type = serializers.CharField(source="board.board_type", read_only=True)
     images = PostImageSerializer(many=True, read_only=True)
     comments = serializers.SerializerMethodField()
 
@@ -145,10 +150,13 @@ class PostDetailSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "board",
+            "board_type",
             "author",
             "author_nickname",
             "title",
             "content",
+            "product_original_price",
+            "product_sale_price",
             "views",
             "likes",
             "is_notice",
@@ -187,7 +195,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Post
-        fields = ("id", "title", "content", "images", "remove_image_ids")
+        fields = ("id", "title", "content", "product_original_price", "product_sale_price", "images", "remove_image_ids")
 
     def to_internal_value(self, data):
         mutable_data = data.copy()
@@ -195,6 +203,9 @@ class PostWriteSerializer(serializers.ModelSerializer):
             remove_values = data.getlist("remove_image_ids")
             if remove_values:
                 mutable_data.setlist("remove_image_ids", remove_values)
+        for field in ("product_original_price", "product_sale_price"):
+            if mutable_data.get(field) == "":
+                mutable_data[field] = None
         return super().to_internal_value(mutable_data)
 
     def create(self, validated_data):
@@ -212,6 +223,8 @@ class PostWriteSerializer(serializers.ModelSerializer):
         remove_image_ids = validated_data.pop("remove_image_ids", [])
         instance.title = validated_data.get("title", instance.title)
         instance.content = validated_data.get("content", instance.content)
+        instance.product_original_price = validated_data.get("product_original_price", instance.product_original_price)
+        instance.product_sale_price = validated_data.get("product_sale_price", instance.product_sale_price)
         instance.save()
         if remove_image_ids:
             instance.images.filter(id__in=remove_image_ids).delete()

@@ -14,6 +14,7 @@ import {
   ExternalCatalogAttribute,
   ExternalCatalogCategory,
   HomeProductSectionConfig,
+  SiteDisplaySettings,
   createAdminHomeHeroSlide,
   createAdminCatalogCategory,
   createAdminCatalogFilter,
@@ -31,6 +32,7 @@ import {
   deleteAdminHomeProductSection,
   getHotdeals,
   getAdminHomeHeroSlides,
+  getAdminSiteDisplaySettings,
   getAdminCatalogCategories,
   getAdminCatalogFilterOptions,
   getAdminCatalogFilters,
@@ -47,6 +49,7 @@ import {
   reorderAdminHomeHeroSlides,
   updateAdminCatalogCategory,
   updateAdminHomeHeroSlide,
+  updateAdminSiteDisplaySettings,
   resolveMediaUrl,
   updateAdminHomeProductSection,
 } from "@/lib/api";
@@ -127,7 +130,7 @@ type HomeSectionEditorItem = {
   client_id: string;
   id: number | null;
   title: string;
-  source_type: "hotdeal" | "marketplace";
+  source_type: "recent_search" | "hotdeal" | "marketplace";
   category_keyword: string;
   item_limit: number;
   sort_order: number;
@@ -275,6 +278,7 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
   const [categoryMappings, setCategoryMappings] = useState<CatalogCategoryMapping[]>([]);
   const [filterMappings, setFilterMappings] = useState<CatalogFilterMapping[]>([]);
   const [homeSectionEditors, setHomeSectionEditors] = useState<HomeSectionEditorItem[]>([]);
+  const [siteSettings, setSiteSettings] = useState<SiteDisplaySettings | null>(null);
   const [draggingHomeSectionId, setDraggingHomeSectionId] = useState<string | null>(null);
   const [homeSectionDragOverId, setHomeSectionDragOverId] = useState<string | null>(null);
   const [isHomeSectionOrderDirty, setIsHomeSectionOrderDirty] = useState(false);
@@ -336,7 +340,11 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
   async function loadData() {
     try {
       if (mode === "ranking") {
-        const homeSectionItems = await getAdminHomeProductSections();
+        const [homeSectionItems, displaySettings] = await Promise.all([
+          getAdminHomeProductSections(),
+          getAdminSiteDisplaySettings(),
+        ]);
+        setSiteSettings(displaySettings);
         setHomeSectionEditors(
           reindexHomeSectionEditors(
             [...homeSectionItems]
@@ -361,6 +369,7 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
         filterMappingItems,
         homeSectionItems,
         homeHeroSlideItems,
+        displaySettings,
       ] = await Promise.all([
         getAdminCatalogProviders(),
         getAdminCatalogCategories(),
@@ -373,6 +382,7 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
         getAdminFilterMappings(),
         getAdminHomeProductSections(),
         getAdminHomeHeroSlides(),
+        getAdminSiteDisplaySettings(),
       ]);
 
       setProviders(providerItems);
@@ -392,6 +402,7 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
         ),
       );
       setIsHomeSectionOrderDirty(false);
+      setSiteSettings(displaySettings);
       const orderedHeroSlides = normalizeHeroSlideOrder(homeHeroSlideItems);
       setHeroSlideEditors((current) => {
         current.forEach((item) => {
@@ -738,7 +749,7 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
       client_id: `new-section-${Date.now()}`,
       id: null,
       title: "",
-      source_type: "marketplace",
+      source_type: "recent_search",
       category_keyword: "",
       item_limit: 30,
       sort_order: homeSectionEditors.length,
@@ -751,6 +762,17 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
   function updateHomeSectionEditor(clientId: string, patch: Partial<HomeSectionEditorItem>) {
     setHomeSectionEditors((current) => current.map((item) => (item.client_id === clientId ? { ...item, ...patch } : item)));
     setIsHomeSectionOrderDirty(true);
+  }
+
+  async function handleToggleSideCategoryMenu() {
+    const current = siteSettings?.show_side_category_menu ?? false;
+    try {
+      const updated = await updateAdminSiteDisplaySettings({ show_side_category_menu: !current });
+      setSiteSettings(updated);
+      handleSuccess(updated.show_side_category_menu ? "좌측 녹색 메뉴를 노출하도록 변경했습니다." : "좌측 녹색 메뉴를 숨김 처리했습니다.");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "좌측 메뉴 설정 저장에 실패했습니다.");
+    }
   }
 
   function handleHomeSectionDragStart(event: DragEvent<HTMLElement>, clientId: string) {
@@ -828,7 +850,12 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
     popup.document.close();
 
     try {
-      const sourceItems = item.source_type === "hotdeal" ? await getHotdeals() : await getMarketplaceItems();
+      const sourceItems =
+        item.source_type === "recent_search"
+          ? [...(await getHotdeals()), ...(await getMarketplaceItems())]
+          : item.source_type === "hotdeal"
+            ? await getHotdeals()
+            : await getMarketplaceItems();
       const keyword = item.category_keyword.trim().toLowerCase();
       const filtered = sourceItems
         .filter((entry) => {
@@ -874,7 +901,9 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
 <body>
   <div class="wrap">
     <h1>키워드 상품 보기</h1>
-    <p class="meta">키워드: ${escapeHtml(item.category_keyword || "전체")} · 소스: ${item.source_type === "hotdeal" ? "중고장터" : "판매상품"} · 노출수: ${Math.max(1, item.item_limit || 30)}위</p>
+    <p class="meta">키워드: ${escapeHtml(item.category_keyword || "전체")} · 소스: ${
+      item.source_type === "recent_search" ? "최근검색상품" : item.source_type === "hotdeal" ? "핫딜" : "중고장터"
+    } · 노출수: ${Math.max(1, item.item_limit || 30)}위</p>
     <section class="grid">${cards || "<p>조건에 맞는 상품이 없습니다.</p>"}</section>
   </div>
 </body>
@@ -1168,17 +1197,34 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
 
       {mode === "ranking" ? (
       <section className="rounded-[0.67rem] border border-[var(--border)] bg-white p-8 shadow-soft">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-[0.67rem] border border-[var(--border)] bg-slate-50 px-5 py-4">
+          <div>
+            <h2 className="text-lg font-bold text-[var(--ink)]">좌측 녹색 메뉴</h2>
+            <p className="mt-1 text-sm text-slate-600">핫딜/중고장터/상품리스트의 좌측 카테고리 메뉴 노출을 제어합니다.</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={Boolean(siteSettings?.show_side_category_menu)}
+            onClick={() => void handleToggleSideCategoryMenu()}
+            className={`inline-flex min-w-[112px] items-center justify-center rounded-[5px] px-4 py-2 text-sm font-semibold text-white ${
+              siteSettings?.show_side_category_menu ? "bg-[var(--brand)]" : "bg-slate-500"
+            }`}
+          >
+            {siteSettings?.show_side_category_menu ? "켜짐" : "꺼짐"}
+          </button>
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-[var(--ink)]">상품 순위노출</h2>
-            <p className="mt-2 text-sm text-slate-600">히어로섹션과 동일하게 카드형으로 추가/정렬하고 저장 시 메인 노출에 반영됩니다.</p>
+            <h2 className="text-xl font-bold text-[var(--ink)]">홈 가로형 상품 탭</h2>
+            <p className="mt-2 text-sm text-slate-600">타이틀과 노출 개수를 정하고, 최근검색상품/핫딜/중고장터 소스로 여러 탭을 생성합니다.</p>
           </div>
           <button
             type="button"
             className="rounded-[5px] border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--ink)]"
             onClick={handleAddHomeSectionEditor}
           >
-            + 상품순위노출추가
+            + 상품탭추가
           </button>
         </div>
 
@@ -1218,11 +1264,12 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
                       className="rounded-[5px] border border-[var(--border)] bg-white px-3 py-2 text-sm font-normal"
                       value={item.source_type}
                       onChange={(event) =>
-                        updateHomeSectionEditor(item.client_id, { source_type: event.target.value as "hotdeal" | "marketplace" })
+                        updateHomeSectionEditor(item.client_id, { source_type: event.target.value as "recent_search" | "hotdeal" | "marketplace" })
                       }
                     >
-                      <option value="marketplace">판매상품</option>
-                      <option value="hotdeal">중고장터</option>
+                      <option value="recent_search">최근검색상품</option>
+                      <option value="hotdeal">핫딜</option>
+                      <option value="marketplace">중고장터</option>
                     </select>
 
                     <input
@@ -1274,7 +1321,7 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
             })
           ) : (
             <div className="rounded-[0.67rem] border border-dashed border-[var(--border)] bg-white px-6 py-10 text-center text-sm text-slate-500">
-              등록된 상품순위노출 항목이 없습니다. `+ 상품순위노출추가`를 눌러 생성하세요.
+              등록된 상품 탭이 없습니다. `+ 상품탭추가`를 눌러 생성하세요.
             </div>
           )}
         </div>

@@ -10,8 +10,10 @@ class Board(models.Model):
     BOARD_HOTDEAL = "hotdeal"
     BOARD_MARKETPLACE = "marketplace"
     BOARD_NOTICE = "notice"
+    BOARD_PRODUCT = "product"
     BOARD_TYPE_CHOICES = [
         (BOARD_GENERAL, "일반"),
+        (BOARD_PRODUCT, "상품게시판"),
         (BOARD_HOTDEAL, "핫딜"),
         (BOARD_MARKETPLACE, "중고장터"),
         (BOARD_NOTICE, "공지"),
@@ -77,6 +79,8 @@ class Post(models.Model):
     author = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="posts", on_delete=models.CASCADE)
     title = models.CharField("제목", max_length=200)
     content = models.TextField("본문")
+    product_original_price = models.DecimalField("상품 원래가격", max_digits=12, decimal_places=0, null=True, blank=True)
+    product_sale_price = models.DecimalField("상품 현재가격", max_digits=12, decimal_places=0, null=True, blank=True)
     views = models.PositiveIntegerField("조회수", default=0)
     likes = models.PositiveIntegerField("추천수", default=0)
     is_notice = models.BooleanField("공지 여부", default=False)
@@ -226,6 +230,21 @@ class KeywordFilter(models.Model):
 
     class Meta:
         ordering = ["-created_at", "-id"]
+
+    def __str__(self) -> str:
+        return self.keyword
+
+
+class SearchKeywordStat(models.Model):
+    """통합검색에서 입력된 키워드 집계."""
+
+    keyword = models.CharField("검색어", max_length=100, unique=True)
+    search_count = models.PositiveIntegerField("검색 횟수", default=1)
+    last_searched_at = models.DateTimeField("최근 검색 시각")
+    created_at = models.DateTimeField("생성일", auto_now_add=True)
+
+    class Meta:
+        ordering = ["-search_count", "-last_searched_at", "keyword"]
 
     def __str__(self) -> str:
         return self.keyword

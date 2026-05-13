@@ -7,6 +7,7 @@ from .models import (
     CategoryReferenceImage,
     HomeProductSectionConfig,
     HomeHeroSlide,
+    SiteDisplaySetting,
     CategoryMapping,
     ExternalAttribute,
     ExternalCategory,
@@ -44,6 +45,13 @@ class HomeProductSectionConfigSerializer(serializers.ModelSerializer):
             "sort_order",
             "is_active",
         )
+
+
+class SiteDisplaySettingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SiteDisplaySetting
+        fields = ("show_side_category_menu", "updated_at")
+        read_only_fields = ("updated_at",)
 
 
 class HomeHeroSlideSerializer(serializers.ModelSerializer):

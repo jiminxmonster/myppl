@@ -25,6 +25,7 @@ from .models import (
     CategoryReferenceImage,
     HomeProductSectionConfig,
     HomeHeroSlide,
+    SiteDisplaySetting,
     CategoryMapping,
     ExternalAttribute,
     ExternalCategory,
@@ -40,6 +41,7 @@ from .serializers import (
     CategoryReferenceImageSerializer,
     HomeProductSectionConfigSerializer,
     HomeHeroSlideSerializer,
+    SiteDisplaySettingSerializer,
     CategoryMappingSerializer,
     ExternalAttributeSerializer,
     ExternalCategorySerializer,
@@ -322,6 +324,31 @@ class HomeProductSectionConfigListView(generics.ListAPIView):
 
     def get_queryset(self):
         return HomeProductSectionConfig.objects.filter(is_active=True).order_by("sort_order", "id")
+
+
+class SiteDisplaySettingView(APIView):
+    """공개 화면 노출 설정 API."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        return response.Response(SiteDisplaySettingSerializer(SiteDisplaySetting.get_solo()).data, status=status.HTTP_200_OK)
+
+
+class AdminSiteDisplaySettingView(APIView):
+    """운영자 화면 노출 설정 API."""
+
+    permission_classes = [IsAdminOrModerator]
+
+    def get(self, request, *args, **kwargs):
+        return response.Response(SiteDisplaySettingSerializer(SiteDisplaySetting.get_solo()).data, status=status.HTTP_200_OK)
+
+    def patch(self, request, *args, **kwargs):
+        setting = SiteDisplaySetting.get_solo()
+        serializer = SiteDisplaySettingSerializer(setting, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return response.Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class AdminHomeProductSectionConfigListCreateView(generics.ListCreateAPIView):

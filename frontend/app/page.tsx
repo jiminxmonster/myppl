@@ -6,6 +6,7 @@ import {
   getBoards,
   getHomeHeroSlides,
   getHomeProductSections,
+  getPopularSearchKeywords,
   getBoardPosts,
   getHotdeals,
   getMarketplaceItems,
@@ -16,12 +17,13 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [boards, heroSlides, homeSections, hotdeals, marketplaceItems] = await Promise.all([
+  const [boards, heroSlides, homeSections, hotdeals, marketplaceItems, popularSearchKeywords] = await Promise.all([
     getBoards().catch(() => []),
     getHomeHeroSlides().catch(() => []),
     getHomeProductSections().catch(() => []),
     getHotdeals().catch(() => []),
     getMarketplaceItems().catch(() => []),
+    getPopularSearchKeywords(40).catch(() => []),
   ]);
 
   const buyerBoard = boards.find((board) => board.show_in_top_menu && board.audience === "buyer");
@@ -105,37 +107,88 @@ export default async function HomePage() {
   const activeHeroSlides: HeroSlide[] =
     configuredHeroSlides.length > 0 ? (configuredHeroSlides as HeroSlide[]) : (fallbackHeroSlides as HeroSlide[]);
 
-  const productSections = homeSections
+  const configuredHomeSections =
+    homeSections.length > 0
+      ? homeSections
+      : [
+          {
+            id: 0,
+            title: "최근많이 검색된 상품",
+            description: "",
+            source_type: "recent_search" as const,
+            category_keyword: "",
+            item_limit: 12,
+            sort_order: 0,
+            is_active: true,
+          },
+        ];
+
+  const productSections = configuredHomeSections
     .map((section) => {
       const keyword = section.category_keyword.trim();
       const limit = Math.min(section.item_limit || 30, 30);
+      const hotdealCards = [...hotdeals]
+        .sort((left, right) => right.view_count - left.view_count)
+        .map((item) => ({
+          id: item.id,
+          key: `hotdeal-${item.id}`,
+          title: item.title,
+          category: item.category_name || "핫딜",
+          subtitle: `${item.category_name || "핫딜"} · 조회 ${item.view_count}`,
+          image: resolveMediaUrl(item.image || getProductPlaceholder("hotdeal", item.category_name)),
+          href: `/hotdeals/${item.id}`,
+          price: `₩${Number(item.sale_price).toLocaleString("ko-KR")}`,
+          originalPrice: `₩${Number(item.original_price).toLocaleString("ko-KR")}`,
+          viewCount: item.view_count,
+        }));
+      const marketplaceCards = [...marketplaceItems]
+        .sort((left, right) => right.view_count - left.view_count)
+        .map((item) => ({
+          id: item.id,
+          key: `marketplace-${item.id}`,
+          title: item.title,
+          category: item.category_name || "상품",
+          subtitle: `${item.category_name || "상품"} · 조회 ${item.view_count}`,
+          image: resolveMediaUrl(item.image || item.external_image_url || getProductPlaceholder("marketplace", item.category_name)),
+          href: `/marketplace/${item.id}`,
+          price: `₩${Number(item.price).toLocaleString("ko-KR")}`,
+          viewCount: item.view_count,
+        }));
       const sourceItems =
-        section.source_type === "hotdeal"
+        section.source_type === "recent_search"
           ? (() => {
-              const sorted = [...hotdeals].sort((left, right) => right.view_count - left.view_count);
-              const filtered = keyword ? sorted.filter((item) => item.category_name?.includes(keyword)) : sorted;
-              const candidate = filtered.length > 0 ? filtered : sorted;
-              return candidate.slice(0, limit).map((item) => ({
-                id: item.id,
-                title: item.title,
-                subtitle: `${item.category_name || "핫딜"} · 조회 ${item.view_count}`,
-                image: resolveMediaUrl(item.image || getProductPlaceholder("hotdeal", item.category_name)),
-                href: `/hotdeals/${item.id}`,
-                price: `₩${Number(item.sale_price).toLocaleString("ko-KR")}`,
-              }));
+              const combined = [...hotdealCards, ...marketplaceCards].sort((left, right) => right.viewCount - left.viewCount);
+              const selected = new Map<string, (typeof combined)[number]>();
+              popularSearchKeywords.forEach((search) => {
+                const searchKeyword = search.keyword.trim().toLowerCase();
+                if (!searchKeyword) {
+                  return;
+                }
+                combined
+                  .filter((item) => `${item.title} ${item.category}`.toLowerCase().includes(searchKeyword))
+                  .forEach((item) => {
+                    if (selected.size < limit && !selected.has(item.key)) {
+                      selected.set(item.key, item);
+                    }
+                  });
+              });
+              combined.forEach((item) => {
+                if (selected.size < limit && !selected.has(item.key)) {
+                  selected.set(item.key, item);
+                }
+              });
+              return Array.from(selected.values()).slice(0, limit);
+            })()
+          : section.source_type === "hotdeal"
+          ? (() => {
+              const filtered = keyword ? hotdealCards.filter((item) => item.category.includes(keyword) || item.title.includes(keyword)) : hotdealCards;
+              const candidate = filtered.length > 0 ? filtered : hotdealCards;
+              return candidate.slice(0, limit);
             })()
           : (() => {
-              const sorted = [...marketplaceItems].sort((left, right) => right.view_count - left.view_count);
-              const filtered = keyword ? sorted.filter((item) => item.category_name?.includes(keyword)) : sorted;
-              const candidate = filtered.length > 0 ? filtered : sorted;
-              return candidate.slice(0, limit).map((item) => ({
-                id: item.id,
-                title: item.title,
-                subtitle: `${item.category_name || "상품"} · 조회 ${item.view_count}`,
-                image: resolveMediaUrl(item.image || item.external_image_url || getProductPlaceholder("marketplace", item.category_name)),
-                href: `/marketplace/${item.id}`,
-                price: `₩${Number(item.price).toLocaleString("ko-KR")}`,
-              }));
+              const filtered = keyword ? marketplaceCards.filter((item) => item.category.includes(keyword) || item.title.includes(keyword)) : marketplaceCards;
+              const candidate = filtered.length > 0 ? filtered : marketplaceCards;
+              return candidate.slice(0, limit);
             })();
 
       return {

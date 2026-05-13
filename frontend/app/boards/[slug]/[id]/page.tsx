@@ -22,7 +22,7 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
       <PageNavigator
         items={[
           { label: "홈", href: "/" },
-          { label: board?.slug === "notice" ? "공지" : "커뮤니티", href: board?.slug === "notice" ? "/boards/notice" : "/boards" },
+          { label: board?.slug === "notice" ? "공지" : board?.board_type === "product" ? "상품게시판" : "커뮤니티", href: board?.slug === "notice" ? "/boards/notice" : "/boards" },
           ...(board ? [{ label: board.name, href: `/boards/${slug}` }] : []),
           { label: post.title },
         ]}

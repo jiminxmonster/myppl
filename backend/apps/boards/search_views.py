@@ -1,11 +1,26 @@
-from django.db.models import Q
+from django.db.models import F, Q
+from django.utils import timezone
 from rest_framework import permissions, response, status
 from rest_framework.views import APIView
 
 from apps.hotdeals.models import Hotdeal
 from apps.marketplace.models import MarketplaceItem
 
-from .models import Post
+from .models import Post, SearchKeywordStat
+
+
+def record_search_keyword(query: str) -> None:
+    keyword = query.strip()[:100]
+    if not keyword:
+        return
+
+    now = timezone.now()
+    stat, created = SearchKeywordStat.objects.get_or_create(
+        keyword=keyword,
+        defaults={"search_count": 1, "last_searched_at": now},
+    )
+    if not created:
+        SearchKeywordStat.objects.filter(id=stat.id).update(search_count=F("search_count") + 1, last_searched_at=now)
 
 
 class UnifiedSearchView(APIView):
@@ -21,6 +36,8 @@ class UnifiedSearchView(APIView):
                 {"query": "", "posts": [], "hotdeals": [], "marketplace": []},
                 status=status.HTTP_200_OK,
             )
+
+        record_search_keyword(query)
 
         post_results = (
             Post.objects.select_related("board", "author")
@@ -76,5 +93,30 @@ class UnifiedSearchView(APIView):
                     for item in marketplace_results
                 ],
             },
+            status=status.HTTP_200_OK,
+        )
+
+
+class PopularSearchKeywordView(APIView):
+    """메인 자동 상품 섹션에서 사용할 최근 인기 검색어 API."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            limit = min(max(int(request.query_params.get("limit", 20)), 1), 100)
+        except (TypeError, ValueError):
+            limit = 20
+
+        keywords = SearchKeywordStat.objects.order_by("-search_count", "-last_searched_at", "keyword")[:limit]
+        return response.Response(
+            [
+                {
+                    "keyword": item.keyword,
+                    "search_count": item.search_count,
+                    "last_searched_at": item.last_searched_at,
+                }
+                for item in keywords
+            ],
             status=status.HTTP_200_OK,
         )

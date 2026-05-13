@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { SafeImage } from "@/components/common/safe-image";
 
 type HomeProductCard = {
@@ -12,6 +11,7 @@ type HomeProductCard = {
   image?: string;
   href: string;
   price?: string;
+  originalPrice?: string;
 };
 
 type DisplayCard = HomeProductCard & {
@@ -37,27 +37,7 @@ export function HomeProductSection({
   description: string;
   items: HomeProductCard[];
 }) {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [visibleCount, setVisibleCount] = useState(4);
   const minimumDeckCount = 12;
-
-  useEffect(() => {
-    function syncVisibleCount() {
-      if (window.innerWidth < 640) {
-        setVisibleCount(1);
-        return;
-      }
-      if (window.innerWidth < 1024) {
-        setVisibleCount(2);
-        return;
-      }
-      setVisibleCount(4);
-    }
-
-    syncVisibleCount();
-    window.addEventListener("resize", syncVisibleCount);
-    return () => window.removeEventListener("resize", syncVisibleCount);
-  }, []);
 
   const paddedItems = useMemo<DisplayCard[]>(() => {
     if (items.length >= minimumDeckCount) {
@@ -77,50 +57,11 @@ export function HomeProductSection({
     return [...items, ...placeholders];
   }, [items]);
 
-  const deck = useMemo(() => {
-    if (paddedItems.length <= visibleCount) {
-      return paddedItems;
-    }
-
-    return [...paddedItems, ...paddedItems.slice(0, visibleCount)];
-  }, [paddedItems, visibleCount]);
-
-  useEffect(() => {
-    if (paddedItems.length <= visibleCount) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      setActiveIndex((current) => (current + 1) % paddedItems.length);
-    }, 3000);
-
-    return () => window.clearInterval(timer);
-  }, [paddedItems.length, visibleCount]);
-
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [visibleCount, title]);
+  const deck = useMemo(() => [...paddedItems, ...paddedItems], [paddedItems]);
+  const animationSeconds = Math.max(36, paddedItems.length * 5);
 
   if (items.length === 0) {
     return null;
-  }
-
-  function handlePrev() {
-    setActiveIndex((current) => {
-      if (paddedItems.length <= visibleCount) {
-        return 0;
-      }
-      return (current - 1 + paddedItems.length) % paddedItems.length;
-    });
-  }
-
-  function handleNext() {
-    setActiveIndex((current) => {
-      if (paddedItems.length <= visibleCount) {
-        return 0;
-      }
-      return (current + 1) % paddedItems.length;
-    });
   }
 
   return (
@@ -132,32 +73,15 @@ export function HomeProductSection({
         </div>
       </div>
       <div className="relative overflow-hidden">
-        <button
-          type="button"
-          className="absolute left-1 top-[38%] z-10 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-[5px] border border-[var(--border)] bg-white/95 text-[var(--ink)] shadow-soft transition hover:bg-white sm:left-2"
-          onClick={handlePrev}
-          aria-label={`${title} 이전 상품 보기`}
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <button
-          type="button"
-          className="absolute right-1 top-[38%] z-10 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-[5px] border border-[var(--border)] bg-white/95 text-[var(--ink)] shadow-soft transition hover:bg-white sm:right-2"
-          onClick={handleNext}
-          aria-label={`${title} 다음 상품 보기`}
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
         <div
-          className="flex gap-4 transition-transform duration-700 ease-out"
+          className="home-product-marquee flex w-max gap-4"
           style={{
-            width: `${(deck.length * 100) / visibleCount}%`,
-            transform: `translateX(-${(activeIndex * 100) / deck.length}%)`,
+            animationDuration: `${animationSeconds}s`,
           }}
         >
           {deck.map((item, index) => {
             const cardClassName =
-              "block overflow-hidden rounded-[0.67rem] border border-[var(--border)] bg-white shadow-soft transition hover:-translate-y-1";
+              "block w-[220px] shrink-0 overflow-hidden rounded-[0.67rem] border border-[var(--border)] bg-white shadow-soft transition hover:-translate-y-1 sm:w-[250px] lg:w-[270px]";
 
             const cardContent = (
               <>
@@ -178,6 +102,7 @@ export function HomeProductSection({
                 <div className="space-y-2 p-4 sm:p-5">
                   <p className="line-clamp-2 min-h-[3rem] text-sm font-semibold text-[var(--ink)] sm:text-base">{item.title}</p>
                   <p className="text-xs text-slate-500 sm:text-sm">{item.subtitle}</p>
+                  {item.originalPrice ? <p className="text-sm text-slate-400 line-through">{item.originalPrice}</p> : null}
                   {item.price ? <p className="text-base font-bold text-[var(--brand)] sm:text-lg">{item.price}</p> : null}
                 </div>
               </>
@@ -188,7 +113,6 @@ export function HomeProductSection({
                 <div
                   key={`${item.id}-${index}`}
                   className={cardClassName}
-                  style={{ width: `${100 / deck.length}%` }}
                 >
                   {cardContent}
                 </div>
@@ -200,13 +124,32 @@ export function HomeProductSection({
                 key={`${item.id}-${index}`}
                 href={item.href}
                 className={cardClassName}
-                style={{ width: `${100 / deck.length}%` }}
               >
                 {cardContent}
               </Link>
             );
           })}
         </div>
+        <style jsx>{`
+          .home-product-marquee {
+            animation-name: home-product-marquee;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+          }
+
+          .home-product-marquee:hover {
+            animation-play-state: paused;
+          }
+
+          @keyframes home-product-marquee {
+            from {
+              transform: translateX(0);
+            }
+            to {
+              transform: translateX(-50%);
+            }
+          }
+        `}</style>
       </div>
     </section>
   );

@@ -153,9 +153,11 @@ class CategoryReferenceImage(models.Model):
 class HomeProductSectionConfig(models.Model):
     """메인 화면의 카테고리별 상품 슬라이드 섹션 설정."""
 
+    SOURCE_RECENT_SEARCH = "recent_search"
     SOURCE_HOTDEAL = "hotdeal"
     SOURCE_MARKETPLACE = "marketplace"
     SOURCE_CHOICES = [
+        (SOURCE_RECENT_SEARCH, "최근검색상품"),
         (SOURCE_HOTDEAL, "핫딜"),
         (SOURCE_MARKETPLACE, "중고장터"),
     ]
@@ -175,6 +177,25 @@ class HomeProductSectionConfig(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+
+class SiteDisplaySetting(models.Model):
+    """사이트 화면 노출 설정."""
+
+    show_side_category_menu = models.BooleanField("좌측 녹색 카테고리 메뉴 노출", default=False)
+    updated_at = models.DateTimeField("수정일", auto_now=True)
+
+    class Meta:
+        verbose_name = "사이트 화면 설정"
+        verbose_name_plural = "사이트 화면 설정"
+
+    def __str__(self) -> str:
+        return "사이트 화면 설정"
+
+    @classmethod
+    def get_solo(cls):
+        setting, _ = cls.objects.get_or_create(id=1, defaults={"show_side_category_menu": False})
+        return setting
 
 
 class HomeHeroSlide(models.Model):

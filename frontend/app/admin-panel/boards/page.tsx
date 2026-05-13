@@ -209,6 +209,7 @@ export default function AdminBoardsPage() {
     setEditingForm({
       name: board.name,
       parent: (board as AdminBoard & { parent?: number | null }).parent ?? null,
+      board_type: board.board_type,
       audience: (board as AdminBoard & { audience?: string }).audience ?? "all",
       description: board.description,
       is_visible: board.is_visible,
@@ -246,7 +247,8 @@ export default function AdminBoardsPage() {
         <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
           <input className="rounded-2xl border border-[var(--border)] px-4 py-3" placeholder="게시판 이름" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
           <select className="rounded-2xl border border-[var(--border)] px-4 py-3" value={form.board_type} onChange={(event) => setForm((current) => ({ ...current, board_type: event.target.value }))}>
-            <option value="general">일반</option>
+            <option value="general">일반 게시판</option>
+            <option value="product">상품 게시판</option>
             <option value="notice">공지</option>
           </select>
           <select
@@ -357,6 +359,15 @@ export default function AdminBoardsPage() {
                       {editingBoardId === board.id ? (
                         <div className="mt-4 grid gap-3 md:grid-cols-2">
                           <input className="rounded-2xl border border-[var(--border)] px-4 py-3" value={editingForm.name ?? ""} onChange={(event) => setEditingForm((current) => ({ ...current, name: event.target.value }))} />
+                          <select
+                            className="rounded-2xl border border-[var(--border)] px-4 py-3"
+                            value={(editingForm.board_type as string | undefined) ?? board.board_type}
+                            onChange={(event) => setEditingForm((current) => ({ ...current, board_type: event.target.value }))}
+                          >
+                            <option value="general">일반 게시판</option>
+                            <option value="product">상품 게시판</option>
+                            <option value="notice">공지</option>
+                          </select>
                           <select
                             className="rounded-2xl border border-[var(--border)] px-4 py-3"
                             value={(editingForm.parent as number | null | undefined) ?? ""}

@@ -16,6 +16,8 @@ export default function WritePage({ params }: WritePageProps) {
   const [board, setBoard] = useState<BoardItem | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [productOriginalPrice, setProductOriginalPrice] = useState("");
+  const [productSalePrice, setProductSalePrice] = useState("");
   const [images, setImages] = useState<FileList | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,7 +43,13 @@ export default function WritePage({ params }: WritePageProps) {
 
     try {
       // 에디터는 추후 교체 가능하도록 현재는 텍스트 영역 기반으로 둔다.
-      const post = await createPost(params.slug, { title, content, images });
+      const post = await createPost(params.slug, {
+        title,
+        content,
+        images,
+        product_original_price: board?.board_type === "product" ? productOriginalPrice : "",
+        product_sale_price: board?.board_type === "product" ? productSalePrice : "",
+      });
       router.push(`/boards/${params.slug}/${post.id}`);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "게시글 저장에 실패했습니다.");
@@ -55,7 +63,7 @@ export default function WritePage({ params }: WritePageProps) {
       <PageNavigator
         items={[
           { label: "홈", href: "/" },
-          { label: board?.slug === "notice" ? "공지" : "커뮤니티", href: board?.slug === "notice" ? "/boards/notice" : "/boards" },
+          { label: board?.slug === "notice" ? "공지" : board?.board_type === "product" ? "상품게시판" : "커뮤니티", href: board?.slug === "notice" ? "/boards/notice" : "/boards" },
           ...(board ? [{ label: board.name, href: `/boards/${params.slug}` }] : []),
           { label: "글쓰기" },
         ]}
@@ -71,6 +79,30 @@ export default function WritePage({ params }: WritePageProps) {
             onChange={(event) => setTitle(event.target.value)}
           />
         </label>
+        {board?.board_type === "product" ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block space-y-2">
+              <span className="text-sm font-medium">원래가격</span>
+              <input
+                type="number"
+                min={0}
+                className="w-full rounded-[5px] border border-[var(--border)] px-4 py-3 outline-none"
+                value={productOriginalPrice}
+                onChange={(event) => setProductOriginalPrice(event.target.value)}
+              />
+            </label>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium">지금가격</span>
+              <input
+                type="number"
+                min={0}
+                className="w-full rounded-[5px] border border-[var(--border)] px-4 py-3 outline-none"
+                value={productSalePrice}
+                onChange={(event) => setProductSalePrice(event.target.value)}
+              />
+            </label>
+          </div>
+        ) : null}
         <label className="block space-y-2">
           <span className="text-sm font-medium">본문</span>
           <textarea

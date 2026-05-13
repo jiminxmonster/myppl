@@ -5,6 +5,7 @@ from .models import (
     CategoryFilterOption,
     HomeProductSectionConfig,
     HomeHeroSlide,
+    SiteDisplaySetting,
     CategoryMapping,
     ExternalAttribute,
     ExternalAttributeValue,
@@ -101,6 +102,11 @@ class HomeProductSectionConfigAdmin(admin.ModelAdmin):
     list_display = ("title", "source_type", "category_keyword", "item_limit", "sort_order", "is_active")
     list_filter = ("source_type", "is_active")
     search_fields = ("title", "category_keyword")
+
+
+@admin.register(SiteDisplaySetting)
+class SiteDisplaySettingAdmin(admin.ModelAdmin):
+    list_display = ("show_side_category_menu", "updated_at")
 
 
 @admin.register(HomeHeroSlide)

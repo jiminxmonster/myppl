@@ -11,6 +11,7 @@ import {
   getMarketplaceItems,
   getMarketplaceCategories,
   getProductPlaceholder,
+  getSiteDisplaySettings,
   resolveMediaUrl,
 } from "@/lib/api";
 
@@ -39,11 +40,13 @@ export default async function ProductsPage({
   const params = (await searchParams) ?? {};
   const selectedCategorySlug = params.category ? decodeURIComponent(params.category) : null;
 
-  const [catalogCategories, hotdeals, marketplaceItems] = await Promise.all([
+  const [catalogCategories, hotdeals, marketplaceItems, siteSettings] = await Promise.all([
     Promise.all([getHotdealCategories().catch(() => []), getMarketplaceCategories().catch(() => [])]),
     getHotdeals().catch(() => []),
     getMarketplaceItems().catch(() => []),
+    getSiteDisplaySettings().catch(() => ({ show_side_category_menu: false })),
   ]);
+  const showSideCategoryMenu = siteSettings.show_side_category_menu;
 
   const [hotdealCategories, marketplaceCategories] = catalogCategories;
   const saleCategories: ProductMenuCategory[] = hotdealCategories
@@ -130,16 +133,17 @@ export default async function ProductsPage({
         actions={<ProductsActionBar />}
       />
 
-      <div className="grid items-stretch gap-3 xl:gap-6 grid-cols-[92px_minmax(0,1fr)] xl:grid-cols-[280px_1fr]">
-        <SideCategoryMenu
-          title="상품 카테고리"
-          basePath="/products"
-          categories={topCategories}
-          groupedCategories={groupedMenuCategories}
-          selectedCategorySlug={selectedCategorySlug}
-          refreshSource="products"
-        />
-
+      <div className={showSideCategoryMenu ? "grid items-stretch gap-3 xl:gap-6 grid-cols-[92px_minmax(0,1fr)] xl:grid-cols-[280px_1fr]" : "block"}>
+        {showSideCategoryMenu ? (
+          <SideCategoryMenu
+            title="상품 카테고리"
+            basePath="/products"
+            categories={topCategories}
+            groupedCategories={groupedMenuCategories}
+            selectedCategorySlug={selectedCategorySlug}
+            refreshSource="products"
+          />
+        ) : null}
         <div className="space-y-5">
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--border)] pb-3">
             <div>

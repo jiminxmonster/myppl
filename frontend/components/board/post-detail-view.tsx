@@ -16,6 +16,11 @@ type PostDetailViewProps = {
 
 export function PostDetailView({ slug, postId, initialPost }: PostDetailViewProps) {
   const [post, setPost] = useState(initialPost);
+  const isProductPost = post.board_type === "product";
+  const primaryImage = post.images[0] ?? null;
+  const galleryImages = isProductPost ? post.images.slice(1) : post.images;
+  const originalPrice = post.product_original_price ? Number(post.product_original_price).toLocaleString("ko-KR") : null;
+  const salePrice = post.product_sale_price ? Number(post.product_sale_price).toLocaleString("ko-KR") : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -51,10 +56,30 @@ export function PostDetailView({ slug, postId, initialPost }: PostDetailViewProp
             <PostLikeButton postId={post.id} initialLikes={post.likes} />
           </div>
         </div>
+        {isProductPost ? (
+          <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="flex min-h-[320px] items-center justify-center rounded-[0.5rem] border border-[var(--border)] bg-[var(--muted)] p-4">
+              {primaryImage ? (
+                <img
+                  src={resolveMediaUrl(primaryImage.image)}
+                  alt={`${post.title} 상품 이미지`}
+                  className="h-full max-h-[420px] w-full object-contain"
+                />
+              ) : (
+                <span className="text-sm text-slate-500">이미지 없음</span>
+              )}
+            </div>
+            <aside className="space-y-4 rounded-[0.5rem] border border-[var(--border)] bg-slate-50 p-5">
+              <p className="text-sm font-semibold text-slate-500">상품 정보</p>
+              {originalPrice ? <p className="text-lg text-slate-400 line-through">₩{originalPrice}</p> : null}
+              <p className="text-3xl font-black text-[var(--brand)]">{salePrice ? `₩${salePrice}` : "가격 문의"}</p>
+            </aside>
+          </div>
+        ) : null}
         <div className="mt-8 whitespace-pre-wrap text-base leading-8 text-slate-800">{post.content}</div>
-        {post.images.length > 0 ? (
+        {galleryImages.length > 0 ? (
           <div className="mt-8 grid gap-4 md:grid-cols-2">
-            {post.images.map((image) => (
+            {galleryImages.map((image) => (
               <a
                 key={image.id}
                 href={resolveMediaUrl(image.image)}

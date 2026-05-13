@@ -70,6 +70,9 @@ export type PostSummary = {
   title: string;
   author_nickname: string;
   thumbnail_image: string | null;
+  board_type?: string;
+  product_original_price?: string | null;
+  product_sale_price?: string | null;
   views: number;
   likes: number;
   comment_count: number;
@@ -110,10 +113,13 @@ export type CreateCommentPayload = {
 export type PostDetail = {
   id: number;
   board: number;
+  board_type?: string;
   author: number;
   author_nickname: string;
   title: string;
   content: string;
+  product_original_price?: string | null;
+  product_sale_price?: string | null;
   views: number;
   likes: number;
   images: { id: number; image: string; created_at: string }[];
@@ -501,11 +507,22 @@ export type HomeProductSectionConfig = {
   id: number;
   title: string;
   description: string;
-  source_type: "hotdeal" | "marketplace";
+  source_type: "recent_search" | "hotdeal" | "marketplace";
   category_keyword: string;
   item_limit: number;
   sort_order: number;
   is_active: boolean;
+};
+
+export type SiteDisplaySettings = {
+  show_side_category_menu: boolean;
+  updated_at: string;
+};
+
+export type PopularSearchKeyword = {
+  keyword: string;
+  search_count: number;
+  last_searched_at: string;
 };
 
 export type CatalogFilter = {
@@ -733,6 +750,21 @@ export async function getBoardPosts(slug: string): Promise<PostSummary[]> {
 
 export async function getBoardDetail(slug: string): Promise<BoardItem> {
   const response = await apiClient.get(`/boards/${slug}/`);
+  return response.data;
+}
+
+export async function getSiteDisplaySettings(): Promise<SiteDisplaySettings> {
+  const response = await apiClient.get("/catalog/site-settings/");
+  return response.data;
+}
+
+export async function getAdminSiteDisplaySettings(): Promise<SiteDisplaySettings> {
+  const response = await apiClient.get("/admin/catalog/site-settings/");
+  return response.data;
+}
+
+export async function updateAdminSiteDisplaySettings(payload: Partial<SiteDisplaySettings>): Promise<SiteDisplaySettings> {
+  const response = await apiClient.patch("/admin/catalog/site-settings/", payload);
   return response.data;
 }
 
@@ -1261,6 +1293,11 @@ export async function getHomeProductSections(): Promise<HomeProductSectionConfig
   return Array.isArray(response.data) ? response.data : response.data.results ?? [];
 }
 
+export async function getPopularSearchKeywords(limit = 30): Promise<PopularSearchKeyword[]> {
+  const response = await apiClient.get(`/search/popular-keywords/?limit=${limit}`);
+  return Array.isArray(response.data) ? response.data : response.data.results ?? [];
+}
+
 export async function getPublicHeroSlides(): Promise<HomeHeroSlide[]> {
   return getHomeHeroSlides();
 }
@@ -1343,12 +1380,20 @@ export async function getPostDetail(postId: string): Promise<PostDetail> {
 
 export async function createPost(
   slug: string,
-  payload: { title: string; content: string; images?: FileList | null }
+  payload: {
+    title: string;
+    content: string;
+    images?: FileList | null;
+    product_original_price?: string;
+    product_sale_price?: string;
+  }
 ) {
   const { accessToken } = getStoredTokens();
   const formData = new FormData();
   formData.append("title", payload.title);
   formData.append("content", payload.content);
+  formData.append("product_original_price", payload.product_original_price ?? "");
+  formData.append("product_sale_price", payload.product_sale_price ?? "");
 
   Array.from(payload.images ?? []).forEach((image) => {
     formData.append("images", image);
@@ -1366,12 +1411,21 @@ export async function createPost(
 
 export async function updatePost(
   postId: string,
-  payload: { title: string; content: string; images?: FileList | null; removeImageIds?: number[] }
+  payload: {
+    title: string;
+    content: string;
+    images?: FileList | null;
+    removeImageIds?: number[];
+    product_original_price?: string;
+    product_sale_price?: string;
+  }
 ) {
   const { accessToken } = getStoredTokens();
   const formData = new FormData();
   formData.append("title", payload.title);
   formData.append("content", payload.content);
+  formData.append("product_original_price", payload.product_original_price ?? "");
+  formData.append("product_sale_price", payload.product_sale_price ?? "");
   (payload.removeImageIds ?? []).forEach((imageId) => {
     formData.append("remove_image_ids", String(imageId));
   });
