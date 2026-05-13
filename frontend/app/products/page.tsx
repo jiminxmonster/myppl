@@ -21,11 +21,12 @@ export const dynamic = "force-dynamic";
 type ProductListItem = {
   id: string;
   title: string;
-  subtitle: string;
   image: string;
   href: string;
   price: string;
   originalPrice?: string | null;
+  discountRate?: number | null;
+  shippingLabel: string;
   viewCount: number;
   kind: "hotdeal" | "marketplace";
 };
@@ -33,6 +34,17 @@ type ProductListItem = {
 type ProductMenuCategory = AdminMenuCategory & {
   source: "hotdeal" | "marketplace";
 };
+
+function formatPrice(value: number) {
+  return `${value.toLocaleString("ko-KR")}원`;
+}
+
+function calculateDiscountRate(originalPrice: number | null, currentPrice: number) {
+  if (!originalPrice || !Number.isFinite(originalPrice) || !Number.isFinite(currentPrice) || originalPrice <= currentPrice) {
+    return null;
+  }
+  return Math.round((1 - currentPrice / originalPrice) * 100);
+}
 
 export default async function ProductsPage({
   searchParams,
@@ -77,32 +89,49 @@ export default async function ProductsPage({
       .filter((item) =>
         selectedCategorySource ? selectedCategorySource === "marketplace" && item.category_slug === selectedRawCategorySlug : true
       )
-      .map((item) => ({
-        id: `marketplace-${item.id}`,
-        title: item.title,
-        subtitle: `${item.category_name || "중고장터"} · ${item.region} · 조회 ${item.view_count}`,
-        image: resolveMediaUrl(item.image || item.external_image_url || getProductPlaceholder("marketplace", item.category_name)),
-        href: `/marketplace/${item.id}`,
-        price: `₩${Number(item.price).toLocaleString("ko-KR")}`,
-        originalPrice: item.original_price ? `₩${Number(item.original_price).toLocaleString("ko-KR")}` : null,
-        viewCount: item.view_count,
-        kind: "marketplace" as const,
-      })),
+      .map((item) => {
+        const priceValue = Number(item.price);
+        const originalPriceValue = item.original_price ? Number(item.original_price) : null;
+        const discountRate = calculateDiscountRate(originalPriceValue, priceValue);
+
+        return {
+          id: `marketplace-${item.id}`,
+          title: item.title,
+          image: resolveMediaUrl(item.image || item.external_image_url || getProductPlaceholder("marketplace", item.category_name)),
+          href: `/marketplace/${item.id}`,
+          price: formatPrice(priceValue),
+          originalPrice: discountRate && originalPriceValue ? formatPrice(originalPriceValue) : null,
+          discountRate,
+          shippingLabel: "무료배송",
+          viewCount: item.view_count,
+          kind: "marketplace" as const,
+        };
+      }),
     ...hotdeals
       .filter((item) =>
         selectedCategorySource ? selectedCategorySource === "hotdeal" && item.category_slug === selectedRawCategorySlug : true
       )
-      .map((item) => ({
-        id: `hotdeal-${item.id}`,
-        title: item.title,
-        subtitle: `${item.category_name || "핫딜"} · 할인 ${Number(item.discount_rate).toFixed(0)}% · 조회 ${item.view_count}`,
-        image: resolveMediaUrl(item.image || getProductPlaceholder("hotdeal", item.category_name)),
-        href: `/hotdeals/${item.id}`,
-        price: `₩${Number(item.sale_price).toLocaleString("ko-KR")}`,
-        originalPrice: `₩${Number(item.original_price).toLocaleString("ko-KR")}`,
-        viewCount: item.view_count,
-        kind: "hotdeal" as const,
-      })),
+      .map((item) => {
+        const priceValue = Number(item.sale_price);
+        const originalPriceValue = Number(item.original_price);
+        const apiDiscountRate = Number(item.discount_rate);
+        const discountRate = Number.isFinite(apiDiscountRate) && apiDiscountRate > 0
+          ? Math.round(apiDiscountRate)
+          : calculateDiscountRate(originalPriceValue, priceValue);
+
+        return {
+          id: `hotdeal-${item.id}`,
+          title: item.title,
+          image: resolveMediaUrl(item.image || getProductPlaceholder("hotdeal", item.category_name)),
+          href: `/hotdeals/${item.id}`,
+          price: formatPrice(priceValue),
+          originalPrice: discountRate ? formatPrice(originalPriceValue) : null,
+          discountRate,
+          shippingLabel: "무료배송",
+          viewCount: item.view_count,
+          kind: "hotdeal" as const,
+        };
+      }),
   ].sort((left, right) => right.viewCount - left.viewCount);
 
   const groupedMenuCategories = [
@@ -179,20 +208,15 @@ export default async function ProductsPage({
                     <SafeImage src={item.image} alt={item.title} className="h-full w-full object-contain" seed={`${item.kind}-${item.id}-${item.title}`} />
                   </div>
                   <div className="space-y-2 p-3 sm:p-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <span
-                        className={`rounded-[5px] px-2 py-1 text-[10px] font-semibold sm:text-xs ${
-                          item.kind === "hotdeal" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
-                        }`}
-                      >
-                        {item.kind === "hotdeal" ? "핫딜" : "중고장터"}
-                      </span>
-                      <span className="text-[10px] font-medium text-slate-400 sm:text-xs">조회 {item.viewCount}</span>
-                    </div>
-                    <p className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold text-[var(--ink)] sm:min-h-[3rem] sm:text-base">{item.title}</p>
-                    <p className="line-clamp-2 text-xs text-slate-500 sm:text-sm">{item.subtitle}</p>
-                    {item.originalPrice ? <p className="text-sm font-semibold text-slate-400 line-through">{item.originalPrice}</p> : null}
-                    <p className="text-base font-bold text-[var(--brand)] sm:text-lg">{item.price}</p>
+                    <p className="line-clamp-2 min-h-[3rem] text-base font-semibold leading-6 text-[var(--ink)] sm:min-h-[3.5rem] sm:text-lg sm:leading-7">{item.title}</p>
+                    {item.originalPrice && item.discountRate ? (
+                      <p className="flex items-baseline gap-1 text-sm font-semibold sm:text-base">
+                        <span className="text-red-600">{item.discountRate}%</span>
+                        <span className="text-slate-400 line-through">{item.originalPrice}</span>
+                      </p>
+                    ) : null}
+                    <p className="text-2xl font-black leading-none text-slate-800 sm:text-3xl">{item.price}</p>
+                    <p className="text-sm font-semibold text-slate-500 sm:text-base">{item.shippingLabel}</p>
                   </div>
                 </Link>
               ))}
