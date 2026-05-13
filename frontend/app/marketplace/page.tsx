@@ -33,10 +33,7 @@ export default async function MarketplacePage({
           </Link>
         }
       />
-      <div className="grid min-h-0 flex-1 items-stretch gap-3 overflow-hidden xl:gap-6 grid-cols-[minmax(0,1fr)_92px] xl:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="min-h-0 overflow-y-auto pr-2">
-          <MarketplaceBoard initialItems={items} />
-        </div>
+      <div className="grid min-h-0 flex-1 items-stretch gap-3 overflow-hidden xl:gap-6 grid-cols-[92px_minmax(0,1fr)] xl:grid-cols-[280px_1fr]">
         <SideCategoryMenu
           title="중고장터 카테고리"
           description="중고장터는 품목군 기준으로 나눠서 원하는 거래글만 빠르게 보게 합니다."
@@ -44,6 +41,9 @@ export default async function MarketplacePage({
           categories={categories}
           refreshSource="marketplace"
         />
+        <div className="min-h-0 overflow-y-auto pr-2">
+          <MarketplaceBoard initialItems={items} />
+        </div>
       </div>
     </section>
   );
