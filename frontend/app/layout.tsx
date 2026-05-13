@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 import { AuthBootstrap } from "@/components/auth/auth-bootstrap";
+import { ScrollToTopButton } from "@/components/layout/scroll-to-top-button";
 import { SiteHeader } from "@/components/layout/site-header";
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export default function RootLayout({
           <SiteHeader />
           <main className="flex-1 py-8">{children}</main>
         </div>
+        <ScrollToTopButton />
       </body>
     </html>
   );
