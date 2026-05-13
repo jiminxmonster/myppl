@@ -3,6 +3,7 @@ import Link from "next/link";
 import { SafeImage } from "@/components/common/safe-image";
 import { PageNavigator } from "@/components/layout/page-navigator";
 import { SideCategoryMenu } from "@/components/layout/side-category-menu";
+import { TopCategoryIconMenu } from "@/components/layout/top-category-icon-menu";
 import { ProductsActionBar } from "@/components/products/products-action-bar";
 import {
   AdminMenuCategory,
@@ -145,6 +146,15 @@ export default async function ProductsPage({
           />
         ) : null}
         <div className="space-y-5">
+          {!showSideCategoryMenu ? (
+            <TopCategoryIconMenu
+              basePath="/products"
+              categories={topCategories}
+              groupedCategories={groupedMenuCategories}
+              selectedCategorySlug={selectedCategorySlug}
+              refreshSource="products"
+            />
+          ) : null}
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--border)] pb-3">
             <div>
               <h1 className="text-2xl font-bold text-[var(--ink)]">

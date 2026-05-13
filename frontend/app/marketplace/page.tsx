@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { PageNavigator } from "@/components/layout/page-navigator";
 import { SideCategoryMenu } from "@/components/layout/side-category-menu";
+import { TopCategoryIconMenu } from "@/components/layout/top-category-icon-menu";
 import { MarketplaceBoard } from "@/components/marketplace/marketplace-board";
 import { getMarketplaceCategories, getMarketplaceItemsByCategory, getSiteDisplaySettings } from "@/lib/api";
 
@@ -45,7 +46,10 @@ export default async function MarketplacePage({
             refreshSource="marketplace"
           />
         ) : null}
-        <div className="min-h-0 overflow-y-auto pr-2">
+        <div className="min-h-0 space-y-6 overflow-y-auto pr-2">
+          {!showSideCategoryMenu ? (
+            <TopCategoryIconMenu basePath="/marketplace" categories={categories} refreshSource="marketplace" selectedCategorySlug={selectedCategory} />
+          ) : null}
           <MarketplaceBoard initialItems={items} />
         </div>
       </div>

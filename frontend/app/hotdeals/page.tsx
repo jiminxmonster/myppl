@@ -1,4 +1,5 @@
 import { SideCategoryMenu } from "@/components/layout/side-category-menu";
+import { TopCategoryIconMenu } from "@/components/layout/top-category-icon-menu";
 import { PageNavigator } from "@/components/layout/page-navigator";
 import { HotdealActionBar } from "@/components/hotdeal/hotdeal-action-bar";
 import { HotdealBoard } from "@/components/hotdeal/hotdeal-board";
@@ -40,7 +41,10 @@ export default async function HotdealsPage({
             refreshSource="hotdeal"
           />
         ) : null}
-        <div className="min-h-0 overflow-y-auto pr-2">
+        <div className="min-h-0 space-y-6 overflow-y-auto pr-2">
+          {!showSideCategoryMenu ? (
+            <TopCategoryIconMenu basePath="/hotdeals" categories={categories} refreshSource="hotdeal" selectedCategorySlug={selectedCategory} />
+          ) : null}
           <HotdealBoard initialItems={items} />
         </div>
       </div>

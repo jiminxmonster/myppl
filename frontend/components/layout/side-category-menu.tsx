@@ -111,7 +111,7 @@ export function SideCategoryMenu({
         isActive: isBaseRoute && !selectedCategory,
       },
       ...flatCategories.map((category) => ({
-        id: String(category.id),
+        id: `${category.slug}-${category.id}`,
         name: category.name,
         description: "",
         href: `${basePath}?category=${encodeURIComponent(category.slug)}`,
@@ -282,7 +282,7 @@ export function SideCategoryMenu({
             const isActive = selectedCategory === category.slug;
             return (
               <Link
-                key={category.id}
+                key={`${category.slug}-${category.id}`}
                 href={`${basePath}?category=${encodeURIComponent(category.slug)}`}
                 className={`block rounded-[5px] border px-4 py-3 text-sm font-medium transition ${
                   isActive ? "border-white bg-white/15" : "border-white/10 hover:bg-white/10"
@@ -319,7 +319,7 @@ export function SideCategoryMenu({
                 const Icon = getCategoryIcon(category.name);
                 return (
                   <Link
-                    key={category.id}
+                    key={`${category.slug}-${category.id}`}
                     href={`${basePath}?category=${encodeURIComponent(category.slug)}`}
                     className={`flex min-h-[70px] flex-col items-center justify-center gap-2 rounded-[5px] border px-2 py-3 text-center text-[10px] font-medium ${
                       isActive ? "border-white bg-white/15 text-white" : "border-white/15 bg-white/5 text-white"

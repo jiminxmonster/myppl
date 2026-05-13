@@ -769,7 +769,11 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
     try {
       const updated = await updateAdminSiteDisplaySettings({ show_side_category_menu: !current });
       setSiteSettings(updated);
-      handleSuccess(updated.show_side_category_menu ? "좌측 녹색 메뉴를 노출하도록 변경했습니다." : "좌측 녹색 메뉴를 숨김 처리했습니다.");
+      handleSuccess(
+        updated.show_side_category_menu
+          ? "좌측 녹색 메뉴로 노출하도록 변경했습니다."
+          : "상단 가로형 아이콘 카테고리로 노출하도록 변경했습니다."
+      );
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "좌측 메뉴 설정 저장에 실패했습니다.");
     }
@@ -1200,7 +1204,7 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-[0.67rem] border border-[var(--border)] bg-slate-50 px-5 py-4">
           <div>
             <h2 className="text-lg font-bold text-[var(--ink)]">좌측 녹색 메뉴</h2>
-            <p className="mt-1 text-sm text-slate-600">핫딜/중고장터/상품리스트의 좌측 카테고리 메뉴 노출을 제어합니다.</p>
+            <p className="mt-1 text-sm text-slate-600">켜짐은 좌측 녹색 메뉴, 꺼짐은 상단 가로형 아이콘 카테고리로 표시합니다.</p>
           </div>
           <button
             type="button"
