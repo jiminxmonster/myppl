@@ -25,6 +25,7 @@ class MarketplaceCategorySerializer(serializers.ModelSerializer):
 class MarketplaceItemSerializer(serializers.ModelSerializer):
     """중고장터 목록/상세 응답 직렬화기."""
 
+    original_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
     author_nickname = serializers.CharField(source="author.nickname", read_only=True)
     category_name = serializers.CharField(source="category.name", read_only=True)
     category_slug = serializers.CharField(source="category.slug", read_only=True)
@@ -50,6 +51,7 @@ class MarketplaceItemSerializer(serializers.ModelSerializer):
             "product_category_slug",
             "image",
             "external_image_url",
+            "original_price",
             "price",
             "view_count",
             "region",
@@ -72,6 +74,13 @@ class MarketplaceItemSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = ("author", "created_at", "updated_at", "reviewed_by", "reviewed_at")
+
+    def to_internal_value(self, data):
+        if hasattr(data, "copy"):
+            data = data.copy()
+        if data.get("original_price") == "":
+            data["original_price"] = None
+        return super().to_internal_value(data)
 
     def get_purchase_request_count(self, obj):
         """판매글에 연결된 구매 요청 수를 계산한다."""

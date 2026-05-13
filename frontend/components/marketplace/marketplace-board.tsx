@@ -49,9 +49,16 @@ export function MarketplaceBoard({ initialItems }: MarketplaceBoardProps) {
                 {item.title}
               </Link>
             </div>
-            <p className="text-2xl font-black text-[#35b15a]">
-              ₩{Number(item.price).toLocaleString()}
-            </p>
+            <div>
+              {item.original_price ? (
+                <p className="text-sm font-semibold text-slate-400 line-through">
+                  ₩{Number(item.original_price).toLocaleString("ko-KR")}
+                </p>
+              ) : null}
+              <p className="text-2xl font-black text-[#35b15a]">
+                ₩{Number(item.price).toLocaleString("ko-KR")}
+              </p>
+            </div>
             <div className="flex items-center gap-3 text-sm text-slate-600">
               <span className="inline-flex items-center gap-1">
                 <MapPin className="h-4 w-4" />

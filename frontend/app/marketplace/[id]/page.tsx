@@ -84,7 +84,14 @@ export default function MarketplaceDetailPage() {
         </div>
         <p className="mt-6 text-base leading-7 text-slate-700">{item.description}</p>
         <div className="mt-6 flex flex-wrap gap-3 text-sm">
-          <span className="rounded-[5px] bg-[var(--muted)] px-4 py-2">{Number(item.price).toLocaleString()}원</span>
+          {item.original_price ? (
+            <span className="rounded-[5px] bg-[var(--muted)] px-4 py-2 text-slate-500 line-through">
+              {Number(item.original_price).toLocaleString("ko-KR")}원
+            </span>
+          ) : null}
+          <span className="rounded-[5px] bg-[var(--brand)] px-4 py-2 font-bold text-white">
+            현재가격 {Number(item.price).toLocaleString("ko-KR")}원
+          </span>
           <span className="rounded-[5px] bg-[var(--muted)] px-4 py-2">{item.is_negotiable ? "흥정 가능" : "흥정 불가"}</span>
           <span className="rounded-[5px] bg-[var(--muted)] px-4 py-2">구매 요청 {item.purchase_request_count}건</span>
           <span className="rounded-[5px] bg-[var(--muted)] px-4 py-2">{item.source_mode === "imported" ? "외부연동 등록" : "수동 등록"}</span>

@@ -132,7 +132,12 @@ export default function SellerProductsPage() {
                       <p className="text-sm text-slate-500">검토 메모: {item.approval_note}</p>
                     ) : null}
                   </div>
-                  <p className="text-lg font-bold text-[var(--brand)]">₩{Number(item.price).toLocaleString("ko-KR")}</p>
+                  <div>
+                    {item.original_price ? (
+                      <p className="text-sm font-semibold text-slate-400 line-through">₩{Number(item.original_price).toLocaleString("ko-KR")}</p>
+                    ) : null}
+                    <p className="text-lg font-bold text-[var(--brand)]">₩{Number(item.price).toLocaleString("ko-KR")}</p>
+                  </div>
                   <div className="flex gap-2">
                     <Link href={`/marketplace/${item.id}`} className="rounded-[5px] border border-[var(--border)] px-4 py-2 text-sm font-semibold text-slate-700">
                       상세보기

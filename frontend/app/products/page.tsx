@@ -25,6 +25,7 @@ type ProductListItem = {
   image: string;
   href: string;
   price: string;
+  originalPrice?: string | null;
   viewCount: number;
   kind: "hotdeal" | "marketplace";
 };
@@ -83,6 +84,7 @@ export default async function ProductsPage({
         image: resolveMediaUrl(item.image || item.external_image_url || getProductPlaceholder("marketplace", item.category_name)),
         href: `/marketplace/${item.id}`,
         price: `₩${Number(item.price).toLocaleString("ko-KR")}`,
+        originalPrice: item.original_price ? `₩${Number(item.original_price).toLocaleString("ko-KR")}` : null,
         viewCount: item.view_count,
         kind: "marketplace" as const,
       })),
@@ -97,6 +99,7 @@ export default async function ProductsPage({
         image: resolveMediaUrl(item.image || getProductPlaceholder("hotdeal", item.category_name)),
         href: `/hotdeals/${item.id}`,
         price: `₩${Number(item.sale_price).toLocaleString("ko-KR")}`,
+        originalPrice: `₩${Number(item.original_price).toLocaleString("ko-KR")}`,
         viewCount: item.view_count,
         kind: "hotdeal" as const,
       })),
@@ -188,6 +191,7 @@ export default async function ProductsPage({
                     </div>
                     <p className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold text-[var(--ink)] sm:min-h-[3rem] sm:text-base">{item.title}</p>
                     <p className="line-clamp-2 text-xs text-slate-500 sm:text-sm">{item.subtitle}</p>
+                    {item.originalPrice ? <p className="text-sm font-semibold text-slate-400 line-through">{item.originalPrice}</p> : null}
                     <p className="text-base font-bold text-[var(--brand)] sm:text-lg">{item.price}</p>
                   </div>
                 </Link>

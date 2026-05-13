@@ -88,7 +88,12 @@ export default function AdminContentsPage() {
                     </div>
                     <h3 className="text-lg font-bold">{item.title}</h3>
                     <p className="text-sm text-slate-600 line-clamp-2">{item.description}</p>
-                    <p className="text-sm text-slate-500">₩{Number(item.price).toLocaleString("ko-KR")} · {item.region}</p>
+                    <p className="text-sm text-slate-500">
+                      {item.original_price ? (
+                        <span className="mr-2 line-through">₩{Number(item.original_price).toLocaleString("ko-KR")}</span>
+                      ) : null}
+                      <span className="font-semibold text-[var(--brand)]">₩{Number(item.price).toLocaleString("ko-KR")}</span> · {item.region}
+                    </p>
                     {item.reviewed_at ? (
                       <p className="text-xs text-slate-400">
                         최근 검토: {new Date(item.reviewed_at).toLocaleString("ko-KR")}

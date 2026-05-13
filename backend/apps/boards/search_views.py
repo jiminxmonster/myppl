@@ -85,6 +85,7 @@ class UnifiedSearchView(APIView):
                         "id": item.id,
                         "title": item.title,
                         "author_nickname": item.author.nickname,
+                        "original_price": item.original_price,
                         "price": item.price,
                         "region": item.region,
                         "status": item.status,

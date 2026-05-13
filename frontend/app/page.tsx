@@ -152,6 +152,7 @@ export default async function HomePage() {
           image: resolveMediaUrl(item.image || item.external_image_url || getProductPlaceholder("marketplace", item.category_name)),
           href: `/marketplace/${item.id}`,
           price: `₩${Number(item.price).toLocaleString("ko-KR")}`,
+          originalPrice: item.original_price ? `₩${Number(item.original_price).toLocaleString("ko-KR")}` : undefined,
           viewCount: item.view_count,
         }));
       const sourceItems =

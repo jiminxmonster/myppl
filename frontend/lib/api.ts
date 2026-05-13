@@ -204,6 +204,7 @@ export type MarketplaceItem = {
   product_category_slug: string;
   image?: string | null;
   external_image_url?: string | null;
+  original_price?: string | null;
   price: string;
   view_count: number;
   region: string;
@@ -307,6 +308,7 @@ export type UnifiedSearchResult = {
     id: number;
     title: string;
     author_nickname: string;
+    original_price?: string | null;
     price: string;
     region: string;
     status: string;
@@ -1569,6 +1571,7 @@ function buildMarketplaceFormData(payload: {
   description: string;
   category?: number | null;
   product_category?: number | null;
+  original_price?: string;
   price: string;
   region: string;
   is_negotiable: boolean;
@@ -1590,6 +1593,7 @@ function buildMarketplaceFormData(payload: {
   if (payload.product_category) {
     formData.append("product_category", String(payload.product_category));
   }
+  formData.append("original_price", payload.original_price ?? "");
   formData.append("price", payload.price);
   formData.append("region", payload.region);
   formData.append("is_negotiable", String(payload.is_negotiable));
@@ -1637,6 +1641,7 @@ export async function createMarketplaceItem(payload: {
   description: string;
   category?: number | null;
   product_category?: number | null;
+  original_price?: string;
   price: string;
   region: string;
   is_negotiable: boolean;
@@ -1666,6 +1671,7 @@ export async function updateMarketplaceItem(itemId: number, payload: {
   description: string;
   category?: number | null;
   product_category?: number | null;
+  original_price?: string;
   price: string;
   region: string;
   is_negotiable: boolean;

@@ -155,9 +155,16 @@ export default function WantedProductsPage() {
                             <p className="mt-1 text-xs text-slate-500">
                               {matchItem.product_category_name || matchItem.category_name || "판매상품"} · 조회 {matchItem.view_count}
                             </p>
-                            <p className="mt-2 text-sm font-bold text-[var(--brand)]">
-                              ₩{Number(matchItem.price).toLocaleString("ko-KR")}
-                            </p>
+                            <div className="mt-2">
+                              {matchItem.original_price ? (
+                                <p className="text-xs font-semibold text-slate-400 line-through">
+                                  ₩{Number(matchItem.original_price).toLocaleString("ko-KR")}
+                                </p>
+                              ) : null}
+                              <p className="text-sm font-bold text-[var(--brand)]">
+                                ₩{Number(matchItem.price).toLocaleString("ko-KR")}
+                              </p>
+                            </div>
                           </div>
                         </Link>
                       ))}

@@ -54,7 +54,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             {result.marketplace.length > 0 ? result.marketplace.map((item) => (
               <Link key={item.id} href={`/marketplace/${item.id}`} className="block rounded-xl bg-[var(--muted)]/50 p-3">
                 <p className="font-medium">{item.title}</p>
-                <p className="mt-1 text-xs text-slate-500">{item.region} · {Number(item.price).toLocaleString()}원</p>
+                <div className="mt-1 text-xs text-slate-500">
+                  {item.region} ·{" "}
+                  {item.original_price ? <span className="mr-1 line-through">{Number(item.original_price).toLocaleString("ko-KR")}원</span> : null}
+                  <span className="font-semibold text-[var(--brand)]">{Number(item.price).toLocaleString("ko-KR")}원</span>
+                </div>
               </Link>
             )) : <p className="text-sm text-slate-500">결과 없음</p>}
           </div>

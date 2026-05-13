@@ -91,6 +91,7 @@ class MarketplaceItem(models.Model):
     )
     image = models.ImageField("대표 이미지", upload_to="marketplace/", blank=True, null=True)
     external_image_url = models.URLField("외부 이미지 URL", blank=True)
+    original_price = models.DecimalField("원래가격", max_digits=12, decimal_places=2, null=True, blank=True)
     price = models.DecimalField("가격", max_digits=12, decimal_places=2)
     view_count = models.PositiveIntegerField("조회수", default=0)
     region = models.CharField("지역", max_length=100)

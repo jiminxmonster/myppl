@@ -101,6 +101,7 @@ export function MarketplaceSellForm({
     product_category: initialItem?.product_category ?? 0,
     title: initialItem?.title ?? "",
     description: initialItem?.description ?? "",
+    original_price: initialItem?.original_price ?? "",
     price: initialItem?.price ?? "",
     region: initialItem?.region ?? "",
     is_negotiable: initialItem?.is_negotiable ?? false,
@@ -289,6 +290,7 @@ export function MarketplaceSellForm({
         product_category: (activeChecklistCategory?.id ?? form.product_category) || null,
         title: form.title,
         description: form.description,
+        original_price: form.original_price,
         price: form.price,
         region: form.region,
         menu_placement: marketType,
@@ -439,10 +441,19 @@ export function MarketplaceSellForm({
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700">가격</label>
+          <label className="text-sm font-semibold text-slate-700">원래가격</label>
           <input
             className="w-full rounded-[5px] border border-[var(--border)] px-4 py-3"
-            placeholder="가격"
+            placeholder="취소선으로 표시할 가격"
+            value={form.original_price}
+            onChange={(event) => setForm((current) => ({ ...current, original_price: event.target.value }))}
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-700">현재가격</label>
+          <input
+            className="w-full rounded-[5px] border border-[var(--border)] px-4 py-3"
+            placeholder="현재 판매 가격"
             value={form.price}
             onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))}
           />
