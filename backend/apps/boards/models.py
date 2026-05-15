@@ -131,6 +131,16 @@ class Post(models.Model):
         (NOTICE_GLOBAL, "전체공지"),
         (NOTICE_BOARD, "게시판공지"),
     ]
+    LIVE_STATUS_SCHEDULED = "scheduled"
+    LIVE_STATUS_ON_AIR = "on_air"
+    LIVE_STATUS_ENDED = "ended"
+    LIVE_STATUS_REPLAY = "replay"
+    LIVE_STATUS_CHOICES = [
+        (LIVE_STATUS_SCHEDULED, "예정"),
+        (LIVE_STATUS_ON_AIR, "진행중"),
+        (LIVE_STATUS_ENDED, "종료"),
+        (LIVE_STATUS_REPLAY, "다시보기"),
+    ]
 
     board = models.ForeignKey(Board, related_name="posts", on_delete=models.CASCADE)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="posts", on_delete=models.CASCADE)
@@ -139,6 +149,19 @@ class Post(models.Model):
     product_original_price = models.DecimalField("상품 원래가격", max_digits=12, decimal_places=0, null=True, blank=True)
     product_sale_price = models.DecimalField("상품 현재가격", max_digits=12, decimal_places=0, null=True, blank=True)
     product_live_url = models.URLField("상품 라이브 방송 링크", max_length=500, blank=True)
+    product_live_platform = models.CharField("라이브 방송 플랫폼", max_length=80, blank=True)
+    product_live_channel = models.CharField("라이브 방송 채널명", max_length=100, blank=True)
+    product_live_starts_at = models.DateTimeField("라이브 방송 시작일시", null=True, blank=True)
+    product_live_ends_at = models.DateTimeField("라이브 방송 종료일시", null=True, blank=True)
+    product_live_status = models.CharField(
+        "라이브 방송 상태",
+        max_length=20,
+        choices=LIVE_STATUS_CHOICES,
+        default=LIVE_STATUS_SCHEDULED,
+        blank=True,
+    )
+    product_live_benefit = models.CharField("라이브 방송 혜택 문구", max_length=200, blank=True)
+    product_live_button_label = models.CharField("라이브 방송 버튼 문구", max_length=40, default="라이브 보기", blank=True)
     views = models.PositiveIntegerField("조회수", default=0)
     likes = models.PositiveIntegerField("추천수", default=0)
     is_notice = models.BooleanField("공지 여부", default=False)

@@ -14,6 +14,8 @@ type HomeProductCard = {
   href: string;
   isExternal?: boolean;
   actionLabel?: string;
+  liveStatusLabel?: string;
+  liveBenefit?: string;
   price?: string;
   originalPrice?: string;
 };
@@ -301,10 +303,16 @@ export function HomeProductSection({
                   )}
                 </div>
                 <div className="space-y-2 p-4 sm:p-5">
+                  {item.liveStatusLabel ? (
+                    <p className="inline-flex rounded-[4px] bg-[var(--accent)] px-2 py-1 text-[10px] font-bold text-white">
+                      {item.liveStatusLabel}
+                    </p>
+                  ) : null}
                   <p className="line-clamp-2 min-h-[3rem] text-sm font-semibold text-[var(--ink)] sm:text-base">{item.title}</p>
                   <p className="text-xs text-slate-500 sm:text-sm">{item.subtitle}</p>
                   {item.originalPrice ? <p className="text-sm text-slate-400 line-through">{item.originalPrice}</p> : null}
                   {item.price ? <p className="text-base font-bold text-[var(--brand)] sm:text-lg">{item.price}</p> : null}
+                  {item.liveBenefit ? <p className="line-clamp-1 text-xs font-semibold text-[var(--brand)]">{item.liveBenefit}</p> : null}
                   {item.actionLabel ? (
                     <p className="inline-flex rounded-[5px] bg-[var(--accent)] px-3 py-1 text-xs font-bold text-white">
                       {item.actionLabel}

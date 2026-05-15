@@ -8,6 +8,7 @@ import { PostLikeButton } from "@/components/board/post-like-button";
 import { PostOwnerActions } from "@/components/board/post-owner-actions";
 import { ProductLiveActions } from "@/components/board/product-live-actions";
 import { PostReportButton } from "@/components/board/post-report-button";
+import { formatKoreanDateTime, getProductLiveStatusLabel } from "@/lib/live-broadcast";
 
 type PostDetailViewProps = {
   slug: string;
@@ -22,7 +23,11 @@ export function PostDetailView({ slug, postId, initialPost }: PostDetailViewProp
   const galleryImages = isProductPost ? post.images.slice(1) : post.images;
   const originalPrice = post.product_original_price ? Number(post.product_original_price).toLocaleString("ko-KR") : null;
   const salePrice = post.product_sale_price ? Number(post.product_sale_price).toLocaleString("ko-KR") : null;
-  const isLiveSpecialPost = post.board_product_board_type === "live_special" && Boolean(post.product_live_url);
+  const isLiveSpecialPost = post.board_product_board_type === "live_special";
+  const liveStatusLabel = getProductLiveStatusLabel(post.product_live_status);
+  const liveStartLabel = formatKoreanDateTime(post.product_live_starts_at);
+  const liveEndLabel = formatKoreanDateTime(post.product_live_ends_at);
+  const liveButtonLabel = post.product_live_button_label || "라이브 보기";
 
   useEffect(() => {
     let cancelled = false;
@@ -75,8 +80,40 @@ export function PostDetailView({ slug, postId, initialPost }: PostDetailViewProp
               <p className="text-sm font-semibold text-slate-500">상품 정보</p>
               {originalPrice ? <p className="text-lg text-slate-400 line-through">₩{originalPrice}</p> : null}
               <p className="text-3xl font-black text-[var(--brand)]">{salePrice ? `₩${salePrice}` : "가격 문의"}</p>
+              {isLiveSpecialPost ? (
+                <div className="space-y-3 border-t border-[var(--border)] pt-4 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-semibold text-slate-500">방송 상태</span>
+                    <span className="rounded-[4px] bg-[var(--accent)] px-2 py-1 text-xs font-bold text-white">{liveStatusLabel}</span>
+                  </div>
+                  {post.product_live_platform ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-semibold text-slate-500">플랫폼</span>
+                      <span className="text-right font-bold text-[var(--ink)]">{post.product_live_platform}</span>
+                    </div>
+                  ) : null}
+                  {post.product_live_channel ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-semibold text-slate-500">채널</span>
+                      <span className="text-right font-bold text-[var(--ink)]">{post.product_live_channel}</span>
+                    </div>
+                  ) : null}
+                  {liveStartLabel || liveEndLabel ? (
+                    <div className="space-y-1">
+                      <span className="font-semibold text-slate-500">방송 시간</span>
+                      <p className="font-bold text-[var(--ink)]">
+                        {liveStartLabel || "시작 미정"}
+                        {liveEndLabel ? ` - ${liveEndLabel}` : ""}
+                      </p>
+                    </div>
+                  ) : null}
+                  {post.product_live_benefit ? (
+                    <p className="rounded-[5px] bg-white px-3 py-2 font-semibold text-[var(--brand)]">{post.product_live_benefit}</p>
+                  ) : null}
+                </div>
+              ) : null}
               {isLiveSpecialPost && post.product_live_url ? (
-                <ProductLiveActions title={post.title} liveUrl={post.product_live_url} />
+                <ProductLiveActions title={post.title} liveUrl={post.product_live_url} buttonLabel={liveButtonLabel} />
               ) : null}
             </aside>
           </div>

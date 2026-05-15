@@ -138,6 +138,8 @@ export default function AdminBoardsPage() {
   const [editingBoardId, setEditingBoardId] = useState<number | null>(null);
   const [editingForm, setEditingForm] = useState<Partial<AdminBoard>>({});
   const [draggedId, setDraggedId] = useState<number | null>(null);
+  const [recentlyCreatedBoardId, setRecentlyCreatedBoardId] = useState<number | null>(null);
+  const [highlightedBoardIds, setHighlightedBoardIds] = useState<number[]>([]);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -152,8 +154,10 @@ export default function AdminBoardsPage() {
       const fetched = await getAdminBoards();
       setBoards(fetched);
       setLocalBoards(fetched);
+      return fetched;
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "게시판 목록을 불러오지 못했습니다.");
+      return [];
     }
   }
 
@@ -163,16 +167,39 @@ export default function AdminBoardsPage() {
     router.refresh();
   };
 
+  const refreshAfterBoardChange = async () => {
+    await loadBoards();
+    notifyBoardUpdate();
+  };
+
+  const getNextSortOrder = () => {
+    if (localBoards.length === 0) {
+      return 0;
+    }
+    return Math.max(...localBoards.map((board) => board.sort_order ?? 0)) + 1;
+  };
+
+  const markBoardMovement = (ids: number[]) => {
+    const nextIds = Array.from(new Set(ids));
+    setHighlightedBoardIds(nextIds);
+    window.setTimeout(() => {
+      setHighlightedBoardIds((current) =>
+        current.some((id) => nextIds.includes(id)) ? current.filter((id) => !nextIds.includes(id)) : current
+      );
+    }, 900);
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     setNotice("");
     try {
-      const created = await createAdminBoard(form);
-      setBoards((current) => [...current, created].sort((a, b) => a.sort_order - b.sort_order));
+      const created = await createAdminBoard({ ...form, sort_order: getNextSortOrder() });
+      setRecentlyCreatedBoardId(created.id);
+      markBoardMovement([created.id]);
       setForm(initialForm);
+      await refreshAfterBoardChange();
       setNotice(`'${created.name}' 게시판을 생성했습니다.`);
-      notifyBoardUpdate();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "게시판 생성에 실패했습니다.");
     }
@@ -195,6 +222,7 @@ export default function AdminBoardsPage() {
     const [draggedItem] = newBoards.splice(fromIndex, 1);
     newBoards.splice(toIndex, 0, draggedItem);
     setLocalBoards(newBoards);
+    markBoardMovement([draggedId, targetId]);
   };
 
   const handleDragEnd = () => {
@@ -205,11 +233,16 @@ export default function AdminBoardsPage() {
     setError("");
     setNotice("");
     try {
+      const changedIds = localBoards
+        .filter((board, index) => boards[index]?.id !== board.id)
+        .map((board) => board.id);
       const order = localBoards.map((board) => board.id);
       await reorderAdminBoards(order);
-      await loadBoards();
+      await refreshAfterBoardChange();
+      if (changedIds.length > 0) {
+        markBoardMovement(changedIds);
+      }
       setNotice("게시판 순서가 저장되었습니다.");
-      notifyBoardUpdate();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "순서 저장에 실패했습니다.");
     }
@@ -229,10 +262,9 @@ export default function AdminBoardsPage() {
 
     try {
       await deleteAdminBoard(board.id);
-      setBoards((current) => current.filter((item) => item.id !== board.id));
+      await refreshAfterBoardChange();
       setError("");
       setNotice(`'${board.name}' 게시판을 삭제했습니다.`);
-      notifyBoardUpdate();
     } catch (requestError) {
       if (axios.isAxiosError(requestError) && requestError.response?.status === 403) {
         const postCount = Number(requestError.response.data?.post_count ?? 0);
@@ -242,10 +274,9 @@ export default function AdminBoardsPage() {
         if (forceConfirmed) {
           try {
             await deleteAdminBoard(board.id, true);
-            setBoards((current) => current.filter((item) => item.id !== board.id));
+            await refreshAfterBoardChange();
             setError("");
             setNotice(`'${board.name}' 게시판과 내부 게시글을 함께 삭제했습니다.`);
-            notifyBoardUpdate();
             return;
           } catch (forceError) {
             setError(forceError instanceof Error ? forceError.message : "게시판 강제 삭제에 실패했습니다.");
@@ -289,12 +320,11 @@ export default function AdminBoardsPage() {
   const handleUpdate = async (boardId: number) => {
     try {
       const updated = await updateAdminBoard(boardId, editingForm);
-      setBoards((current) => current.map((board) => (board.id === boardId ? updated : board)));
+      await refreshAfterBoardChange();
       setEditingBoardId(null);
       setEditingForm({});
       setError("");
       setNotice(`'${updated.name}' 게시판을 수정했습니다.`);
-      notifyBoardUpdate();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "게시판 수정에 실패했습니다.");
     }
@@ -397,19 +427,24 @@ export default function AdminBoardsPage() {
           </div>
           <div className="grid gap-3">
             {localBoards
-              .map((board, index) => (
-                <article
-                  key={board.id}
-                  draggable
-                  onDragStart={() => handleDragStart(board.id)}
-                  onDragOver={(e) => handleDragOver(e, board.id)}
-                  onDragEnd={handleDragEnd}
-                  className={`flex flex-wrap items-center justify-between gap-4 rounded-[0.5rem] border bg-white p-5 transition-all ${
-                    draggedId === board.id
-                      ? "border-[var(--brand)] opacity-50 shadow-lg"
-                      : "border-[var(--border)] shadow-soft hover:border-slate-300"
-                  }`}
-                >
+              .map((board, index) => {
+                const isNewBoard = recentlyCreatedBoardId === board.id;
+                const isMovedBoard = highlightedBoardIds.includes(board.id);
+                return (
+                  <article
+                    key={board.id}
+                    draggable
+                    onDragStart={() => handleDragStart(board.id)}
+                    onDragOver={(e) => handleDragOver(e, board.id)}
+                    onDragEnd={handleDragEnd}
+                    className={`flex flex-wrap items-center justify-between gap-4 rounded-[0.5rem] border bg-white p-5 transition-all duration-300 ease-out ${
+                      draggedId === board.id
+                        ? "scale-[0.99] border-[var(--brand)] opacity-60 shadow-lg"
+                        : "border-[var(--border)] shadow-soft hover:border-slate-300"
+                    } ${isMovedBoard ? "translate-y-[-2px] ring-2 ring-amber-300" : ""} ${
+                      isNewBoard ? "ring-2 ring-emerald-300" : ""
+                    }`}
+                  >
                   <div className="flex items-start gap-4">
                     <div className="mt-1 cursor-grab text-slate-400 active:cursor-grabbing hover:text-slate-600">
                       <GripVertical className="h-5 w-5" />
@@ -442,6 +477,7 @@ export default function AdminBoardsPage() {
                         <span className="rounded-[3px] bg-amber-100 px-2 py-0.5 text-amber-700">
                           글쓰기 {normalizeWriterRoles(board.allowed_writer_roles).map((role) => writerRoleLabelMap[role]).join(", ")}
                         </span>
+                        {isNewBoard ? <span className="rounded-[3px] bg-emerald-100 px-2 py-0.5 text-emerald-700">새로생김</span> : null}
                       </div>
                       {editingBoardId === board.id ? (
                         <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -535,8 +571,9 @@ export default function AdminBoardsPage() {
                       삭제
                     </button>
                   </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
           </div>
         </div>
       </section>

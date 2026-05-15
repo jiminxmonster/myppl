@@ -6,9 +6,10 @@ import { Copy, Radio, Share2 } from "lucide-react";
 type ProductLiveActionsProps = {
   title: string;
   liveUrl: string;
+  buttonLabel?: string;
 };
 
-export function ProductLiveActions({ title, liveUrl }: ProductLiveActionsProps) {
+export function ProductLiveActions({ title, liveUrl, buttonLabel = "라이브 방송 보기" }: ProductLiveActionsProps) {
   const [status, setStatus] = useState("");
 
   async function handleShare() {
@@ -53,7 +54,7 @@ export function ProductLiveActions({ title, liveUrl }: ProductLiveActionsProps) 
           className="inline-flex items-center gap-2 rounded-[5px] bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white"
         >
           <Radio className="h-4 w-4" />
-          라이브 방송 보기
+          {buttonLabel}
         </a>
         <button
           type="button"

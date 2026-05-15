@@ -78,11 +78,20 @@ export type PostSummary = {
   product_original_price?: string | null;
   product_sale_price?: string | null;
   product_live_url?: string;
+  product_live_platform?: string;
+  product_live_channel?: string;
+  product_live_starts_at?: string | null;
+  product_live_ends_at?: string | null;
+  product_live_status?: ProductLiveStatus | "";
+  product_live_benefit?: string;
+  product_live_button_label?: string;
   views: number;
   likes: number;
   comment_count: number;
   created_at: string;
 };
+
+export type ProductLiveStatus = "scheduled" | "on_air" | "ended" | "replay";
 
 export type BoardWriterRole = "all" | "buyer" | "seller" | "admin";
 
@@ -131,6 +140,13 @@ export type PostDetail = {
   product_original_price?: string | null;
   product_sale_price?: string | null;
   product_live_url?: string;
+  product_live_platform?: string;
+  product_live_channel?: string;
+  product_live_starts_at?: string | null;
+  product_live_ends_at?: string | null;
+  product_live_status?: ProductLiveStatus | "";
+  product_live_benefit?: string;
+  product_live_button_label?: string;
   views: number;
   likes: number;
   images: { id: number; image: string; created_at: string }[];
@@ -1410,6 +1426,13 @@ export async function createPost(
     product_original_price?: string;
     product_sale_price?: string;
     product_live_url?: string;
+    product_live_platform?: string;
+    product_live_channel?: string;
+    product_live_starts_at?: string;
+    product_live_ends_at?: string;
+    product_live_status?: ProductLiveStatus | "";
+    product_live_benefit?: string;
+    product_live_button_label?: string;
   }
 ) {
   const { accessToken } = getStoredTokens();
@@ -1419,6 +1442,13 @@ export async function createPost(
   formData.append("product_original_price", payload.product_original_price ?? "");
   formData.append("product_sale_price", payload.product_sale_price ?? "");
   formData.append("product_live_url", payload.product_live_url ?? "");
+  formData.append("product_live_platform", payload.product_live_platform ?? "");
+  formData.append("product_live_channel", payload.product_live_channel ?? "");
+  formData.append("product_live_starts_at", payload.product_live_starts_at ?? "");
+  formData.append("product_live_ends_at", payload.product_live_ends_at ?? "");
+  formData.append("product_live_status", payload.product_live_status ?? "");
+  formData.append("product_live_benefit", payload.product_live_benefit ?? "");
+  formData.append("product_live_button_label", payload.product_live_button_label ?? "");
 
   Array.from(payload.images ?? []).forEach((image) => {
     formData.append("images", image);
@@ -1444,6 +1474,13 @@ export async function updatePost(
     product_original_price?: string;
     product_sale_price?: string;
     product_live_url?: string;
+    product_live_platform?: string;
+    product_live_channel?: string;
+    product_live_starts_at?: string;
+    product_live_ends_at?: string;
+    product_live_status?: ProductLiveStatus | "";
+    product_live_benefit?: string;
+    product_live_button_label?: string;
   }
 ) {
   const { accessToken } = getStoredTokens();
@@ -1453,6 +1490,13 @@ export async function updatePost(
   formData.append("product_original_price", payload.product_original_price ?? "");
   formData.append("product_sale_price", payload.product_sale_price ?? "");
   formData.append("product_live_url", payload.product_live_url ?? "");
+  formData.append("product_live_platform", payload.product_live_platform ?? "");
+  formData.append("product_live_channel", payload.product_live_channel ?? "");
+  formData.append("product_live_starts_at", payload.product_live_starts_at ?? "");
+  formData.append("product_live_ends_at", payload.product_live_ends_at ?? "");
+  formData.append("product_live_status", payload.product_live_status ?? "");
+  formData.append("product_live_benefit", payload.product_live_benefit ?? "");
+  formData.append("product_live_button_label", payload.product_live_button_label ?? "");
   (payload.removeImageIds ?? []).forEach((imageId) => {
     formData.append("remove_image_ids", String(imageId));
   });

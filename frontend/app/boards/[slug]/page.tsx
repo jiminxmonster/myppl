@@ -3,6 +3,7 @@ import Link from "next/link";
 import { SafeImage } from "@/components/common/safe-image";
 import { PageNavigator } from "@/components/layout/page-navigator";
 import { getBoardDetail, getBoardPosts, getProductPlaceholder, resolveMediaUrl } from "@/lib/api";
+import { formatKoreanDateTime, getProductLiveStatusLabel } from "@/lib/live-broadcast";
 
 type BoardPageProps = {
   params: Promise<{ slug: string }>;
@@ -43,6 +44,8 @@ export default async function BoardPage({ params }: BoardPageProps) {
             posts.map((post) => {
               const salePrice = post.product_sale_price ? Number(post.product_sale_price).toLocaleString("ko-KR") : null;
               const originalPrice = post.product_original_price ? Number(post.product_original_price).toLocaleString("ko-KR") : null;
+              const liveStartLabel = formatKoreanDateTime(post.product_live_starts_at);
+              const liveStatusLabel = getProductLiveStatusLabel(post.product_live_status);
               return (
                 <article
                   key={post.id}
@@ -50,9 +53,9 @@ export default async function BoardPage({ params }: BoardPageProps) {
                 >
                   <Link href={`/boards/${slug}/${post.id}`} className="block">
                     <div className="relative flex aspect-square items-center justify-center bg-[var(--muted)]/30 p-2 sm:p-3">
-                      {isLiveSpecialBoard && post.product_live_url ? (
+                      {isLiveSpecialBoard ? (
                         <span className="absolute left-1.5 top-1.5 rounded-[4px] bg-[var(--accent)] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white sm:left-2 sm:top-2">
-                          라이브특가
+                          {liveStatusLabel}
                         </span>
                       ) : null}
                       <SafeImage
@@ -68,6 +71,11 @@ export default async function BoardPage({ params }: BoardPageProps) {
                       </p>
                       {originalPrice ? <p className="truncate text-[11px] text-slate-400 line-through sm:text-xs">₩{originalPrice}</p> : null}
                       <p className="truncate text-sm font-black text-[var(--brand)] sm:text-base">{salePrice ? `₩${salePrice}` : "가격 문의"}</p>
+                      {isLiveSpecialBoard && (post.product_live_platform || liveStartLabel) ? (
+                        <p className="truncate text-[10px] font-semibold text-slate-600 sm:text-xs">
+                          {[post.product_live_platform, liveStartLabel].filter(Boolean).join(" · ")}
+                        </p>
+                      ) : null}
                       <p className="truncate text-[10px] text-slate-500 sm:text-xs">조회 {post.views} · 댓글 {post.comment_count}</p>
                     </div>
                   </Link>
@@ -79,7 +87,7 @@ export default async function BoardPage({ params }: BoardPageProps) {
                         rel="noopener noreferrer"
                         className="inline-flex rounded-[4px] bg-[var(--accent)] px-2 py-1 text-[10px] font-bold text-white sm:text-xs"
                       >
-                        라이브 보기
+                        {post.product_live_button_label || "라이브 보기"}
                       </a>
                     </div>
                   ) : null}

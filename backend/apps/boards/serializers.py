@@ -109,6 +109,13 @@ class PostListSerializer(serializers.ModelSerializer):
             "product_original_price",
             "product_sale_price",
             "product_live_url",
+            "product_live_platform",
+            "product_live_channel",
+            "product_live_starts_at",
+            "product_live_ends_at",
+            "product_live_status",
+            "product_live_benefit",
+            "product_live_button_label",
             "is_deleted",
             "is_blinded",
             "is_notice",
@@ -165,6 +172,13 @@ class PostDetailSerializer(serializers.ModelSerializer):
             "product_original_price",
             "product_sale_price",
             "product_live_url",
+            "product_live_platform",
+            "product_live_channel",
+            "product_live_starts_at",
+            "product_live_ends_at",
+            "product_live_status",
+            "product_live_benefit",
+            "product_live_button_label",
             "views",
             "likes",
             "is_notice",
@@ -210,6 +224,13 @@ class PostWriteSerializer(serializers.ModelSerializer):
             "product_original_price",
             "product_sale_price",
             "product_live_url",
+            "product_live_platform",
+            "product_live_channel",
+            "product_live_starts_at",
+            "product_live_ends_at",
+            "product_live_status",
+            "product_live_benefit",
+            "product_live_button_label",
             "images",
             "remove_image_ids",
         )
@@ -221,6 +242,9 @@ class PostWriteSerializer(serializers.ModelSerializer):
             if remove_values:
                 mutable_data.setlist("remove_image_ids", remove_values)
         for field in ("product_original_price", "product_sale_price"):
+            if mutable_data.get(field) == "":
+                mutable_data[field] = None
+        for field in ("product_live_starts_at", "product_live_ends_at"):
             if mutable_data.get(field) == "":
                 mutable_data[field] = None
         return super().to_internal_value(mutable_data)
@@ -243,6 +267,13 @@ class PostWriteSerializer(serializers.ModelSerializer):
         instance.product_original_price = validated_data.get("product_original_price", instance.product_original_price)
         instance.product_sale_price = validated_data.get("product_sale_price", instance.product_sale_price)
         instance.product_live_url = validated_data.get("product_live_url", instance.product_live_url)
+        instance.product_live_platform = validated_data.get("product_live_platform", instance.product_live_platform)
+        instance.product_live_channel = validated_data.get("product_live_channel", instance.product_live_channel)
+        instance.product_live_starts_at = validated_data.get("product_live_starts_at", instance.product_live_starts_at)
+        instance.product_live_ends_at = validated_data.get("product_live_ends_at", instance.product_live_ends_at)
+        instance.product_live_status = validated_data.get("product_live_status", instance.product_live_status)
+        instance.product_live_benefit = validated_data.get("product_live_benefit", instance.product_live_benefit)
+        instance.product_live_button_label = validated_data.get("product_live_button_label", instance.product_live_button_label)
         instance.save()
         if remove_image_ids:
             instance.images.filter(id__in=remove_image_ids).delete()

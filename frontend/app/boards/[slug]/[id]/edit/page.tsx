@@ -3,9 +3,11 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { LiveBroadcastFields } from "@/components/board/live-broadcast-fields";
 import { PageNavigator } from "@/components/layout/page-navigator";
 import { getStoredTokens } from "@/lib/auth";
-import { BoardItem, getBoardDetail, getPostDetail, resolveMediaUrl, updatePost } from "@/lib/api";
+import { BoardItem, getBoardDetail, getPostDetail, ProductLiveStatus, resolveMediaUrl, updatePost } from "@/lib/api";
+import { formatDateTimeLocal } from "@/lib/live-broadcast";
 import { useAuthStore } from "@/store/authStore";
 
 type EditPageProps = {
@@ -28,6 +30,13 @@ export default function EditPostPage({ params }: EditPageProps) {
   const [productOriginalPrice, setProductOriginalPrice] = useState("");
   const [productSalePrice, setProductSalePrice] = useState("");
   const [productLiveUrl, setProductLiveUrl] = useState("");
+  const [productLivePlatform, setProductLivePlatform] = useState("");
+  const [productLiveChannel, setProductLiveChannel] = useState("");
+  const [productLiveStartsAt, setProductLiveStartsAt] = useState("");
+  const [productLiveEndsAt, setProductLiveEndsAt] = useState("");
+  const [productLiveStatus, setProductLiveStatus] = useState<ProductLiveStatus>("scheduled");
+  const [productLiveBenefit, setProductLiveBenefit] = useState("");
+  const [productLiveButtonLabel, setProductLiveButtonLabel] = useState("라이브 보기");
   const [images, setImages] = useState<FileList | null>(null);
   const [existingImages, setExistingImages] = useState<ExistingImageItem[]>([]);
   const [removeImageIds, setRemoveImageIds] = useState<number[]>([]);
@@ -68,6 +77,13 @@ export default function EditPostPage({ params }: EditPageProps) {
         setProductOriginalPrice(post.product_original_price ?? "");
         setProductSalePrice(post.product_sale_price ?? "");
         setProductLiveUrl(post.product_live_url ?? "");
+        setProductLivePlatform(post.product_live_platform ?? "");
+        setProductLiveChannel(post.product_live_channel ?? "");
+        setProductLiveStartsAt(formatDateTimeLocal(post.product_live_starts_at));
+        setProductLiveEndsAt(formatDateTimeLocal(post.product_live_ends_at));
+        setProductLiveStatus((post.product_live_status as ProductLiveStatus | "") || "scheduled");
+        setProductLiveBenefit(post.product_live_benefit ?? "");
+        setProductLiveButtonLabel(post.product_live_button_label || "라이브 보기");
         setBoard(boardItem);
         setExistingImages(
           post.images.map((image) => ({
@@ -121,6 +137,20 @@ export default function EditPostPage({ params }: EditPageProps) {
         product_sale_price: board?.board_type === "product" ? productSalePrice : "",
         product_live_url:
           board?.board_type === "product" && board.product_board_type === "live_special" ? productLiveUrl.trim() : "",
+        product_live_platform:
+          board?.board_type === "product" && board.product_board_type === "live_special" ? productLivePlatform.trim() : "",
+        product_live_channel:
+          board?.board_type === "product" && board.product_board_type === "live_special" ? productLiveChannel.trim() : "",
+        product_live_starts_at:
+          board?.board_type === "product" && board.product_board_type === "live_special" ? productLiveStartsAt : "",
+        product_live_ends_at:
+          board?.board_type === "product" && board.product_board_type === "live_special" ? productLiveEndsAt : "",
+        product_live_status:
+          board?.board_type === "product" && board.product_board_type === "live_special" ? productLiveStatus : "",
+        product_live_benefit:
+          board?.board_type === "product" && board.product_board_type === "live_special" ? productLiveBenefit.trim() : "",
+        product_live_button_label:
+          board?.board_type === "product" && board.product_board_type === "live_special" ? productLiveButtonLabel.trim() : "",
       });
       router.push(`/boards/${params.slug}/${post.id}`);
       router.refresh();
@@ -194,16 +224,24 @@ export default function EditPostPage({ params }: EditPageProps) {
               />
             </label>
             {board.product_board_type === "live_special" ? (
-              <label className="block space-y-2 md:col-span-2">
-                <span className="text-sm font-medium">타사 라이브 방송 링크</span>
-                <input
-                  type="url"
-                  className="w-full rounded-[5px] border border-[var(--border)] px-4 py-3 outline-none"
-                  placeholder="https://..."
-                  value={productLiveUrl}
-                  onChange={(event) => setProductLiveUrl(event.target.value)}
-                />
-              </label>
+              <LiveBroadcastFields
+                liveUrl={productLiveUrl}
+                platform={productLivePlatform}
+                channel={productLiveChannel}
+                startsAt={productLiveStartsAt}
+                endsAt={productLiveEndsAt}
+                status={productLiveStatus}
+                benefit={productLiveBenefit}
+                buttonLabel={productLiveButtonLabel}
+                onLiveUrlChange={setProductLiveUrl}
+                onPlatformChange={setProductLivePlatform}
+                onChannelChange={setProductLiveChannel}
+                onStartsAtChange={setProductLiveStartsAt}
+                onEndsAtChange={setProductLiveEndsAt}
+                onStatusChange={setProductLiveStatus}
+                onBenefitChange={setProductLiveBenefit}
+                onButtonLabelChange={setProductLiveButtonLabel}
+              />
             ) : null}
           </div>
         ) : null}
