@@ -10,11 +10,9 @@ import { AdminGuard } from "@/components/admin/admin-guard";
 const dashboardItem = { href: "/admin-panel", label: "대시보드" };
 
 const screenManagementItems = [
-  { href: "/admin-panel/boards", label: "게시판관리" },
-  { href: "/admin-panel/grid-boards", label: "그리드형 게시판 관리" },
   { href: "/admin-panel/hero-sections", label: "히어로섹션" },
+  { href: "/admin-panel/boards", label: "게시판관리" },
   { href: "/admin-panel/catalog", label: "상품순위노출" },
-  { href: "/admin-panel/product-menus", label: "상품리스트관리" },
 ];
 
 const policyManagementItems = [
