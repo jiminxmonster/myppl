@@ -129,10 +129,27 @@ export function HomeProductSection({
     return null;
   }
 
-  function clampPage(page: number, container: HTMLDivElement) {
-    const pageWidth = Math.max(container.clientWidth, 1);
-    const maxPage = Math.max(0, Math.ceil((container.scrollWidth - container.clientWidth) / pageWidth));
-    return Math.min(Math.max(page, 0), maxPage);
+  function getCardElements(container: HTMLDivElement) {
+    return Array.from(container.querySelectorAll<HTMLElement>("[data-home-product-card]"));
+  }
+
+  function getClosestCardIndex(cards: HTMLElement[], scrollLeft: number) {
+    return cards.reduce(
+      (closest, card, index) => {
+        const distance = Math.abs(card.offsetLeft - scrollLeft);
+        return distance < closest.distance ? { index, distance } : closest;
+      },
+      { index: 0, distance: Number.POSITIVE_INFINITY }
+    ).index;
+  }
+
+  function getVisibleCardCount(container: HTMLDivElement, cards: HTMLElement[]) {
+    if (cards.length < 2) {
+      return 1;
+    }
+
+    const cardStep = Math.max(cards[1].offsetLeft - cards[0].offsetLeft, cards[0].offsetWidth, 1);
+    return Math.min(cards.length, Math.max(1, Math.round(container.clientWidth / cardStep)));
   }
 
   function handleDragStart(event: PointerEvent<HTMLDivElement>) {
@@ -178,17 +195,23 @@ export function HomeProductSection({
     const pageWidth = Math.max(container.clientWidth, 1);
     const deltaX = event.clientX - state.startX;
     const threshold = Math.max(48, pageWidth * 0.12);
-    const startPage = Math.round(state.startScrollLeft / pageWidth);
-    let nextPage = Math.round(container.scrollLeft / pageWidth);
+    const cards = getCardElements(container);
+    const visibleCardCount = getVisibleCardCount(container, cards);
+    const startIndex = getClosestCardIndex(cards, state.startScrollLeft);
+    let nextIndex = getClosestCardIndex(cards, container.scrollLeft);
 
     if (deltaX <= -threshold) {
-      nextPage = startPage + 1;
+      nextIndex = startIndex + visibleCardCount;
     } else if (deltaX >= threshold) {
-      nextPage = startPage - 1;
+      nextIndex = startIndex - visibleCardCount;
     }
 
+    const maxStartIndex = Math.max(0, cards.length - visibleCardCount);
+    const targetIndex = Math.min(Math.max(nextIndex, 0), maxStartIndex);
+    const targetLeft = cards[targetIndex]?.offsetLeft ?? 0;
+
     container.scrollTo({
-      left: clampPage(nextPage, container) * pageWidth,
+      left: targetLeft,
       behavior: "smooth",
     });
 
@@ -276,6 +299,7 @@ export function HomeProductSection({
               return (
                 <div
                   key={`${item.id}-${index}`}
+                  data-home-product-card
                   className={cardClassName}
                 >
                   {cardContent}
@@ -288,6 +312,7 @@ export function HomeProductSection({
                 key={`${item.id}-${index}`}
                 href={item.href}
                 draggable={false}
+                data-home-product-card
                 className={cardClassName}
               >
                 {cardContent}
