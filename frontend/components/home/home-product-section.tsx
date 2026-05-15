@@ -80,7 +80,7 @@ function RankTopBar({ rank }: { rank: number }) {
     <div className={`flex h-8 items-center justify-between px-3 text-xs font-black ${barClassName}`}>
       <span className="inline-flex items-center gap-1">
         {isPodium ? <Crown className={`h-4 w-4 ${iconClassName}`} fill="currentColor" /> : null}
-        <span>{rank}위</span>
+        <span className="text-[1.3em] leading-none">{rank}</span>
       </span>
       {isPodium ? (
         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/70">
