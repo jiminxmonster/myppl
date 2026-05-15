@@ -311,7 +311,7 @@ export function HomeProductSection({
                   <p className="line-clamp-2 min-h-[3rem] text-sm font-semibold text-[var(--ink)] sm:text-base">{item.title}</p>
                   <p className="text-xs text-slate-500 sm:text-sm">{item.subtitle}</p>
                   {item.originalPrice ? <p className="text-sm text-slate-400 line-through">{item.originalPrice}</p> : null}
-                  {item.price ? <p className="text-base font-bold text-[var(--brand)] sm:text-lg">{item.price}</p> : null}
+                  {item.price ? <p className="text-[1.1rem] font-bold text-[var(--brand)] sm:text-[1.2375rem]">{item.price}</p> : null}
                   {item.liveBenefit ? <p className="line-clamp-1 text-xs font-semibold text-[var(--brand)]">{item.liveBenefit}</p> : null}
                   {item.actionLabel ? (
                     <p className="inline-flex rounded-[5px] bg-[var(--accent)] px-3 py-1 text-xs font-bold text-white">
