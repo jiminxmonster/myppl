@@ -17,6 +17,7 @@ export function HotdealCreateForm({ categories }: HotdealCreateFormProps) {
     title: "",
     description: "",
     source_url: "",
+    live_url: "",
     original_price: "",
     sale_price: "",
     expires_at: "",
@@ -60,6 +61,7 @@ export function HotdealCreateForm({ categories }: HotdealCreateFormProps) {
       </select>
       <input className="border border-[var(--border)] px-4 py-3" placeholder="핫딜 제목" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
       <input className="border border-[var(--border)] px-4 py-3" placeholder="구매 링크" value={form.source_url} onChange={(event) => setForm((current) => ({ ...current, source_url: event.target.value }))} />
+      <input className="border border-[var(--border)] px-4 py-3" placeholder="타사 라이브 방송 링크 (선택)" value={form.live_url} onChange={(event) => setForm((current) => ({ ...current, live_url: event.target.value }))} />
       <input className="border border-[var(--border)] px-4 py-3" placeholder="정가" value={form.original_price} onChange={(event) => setForm((current) => ({ ...current, original_price: event.target.value }))} />
       <input className="border border-[var(--border)] px-4 py-3" placeholder="판매가" value={form.sale_price} onChange={(event) => setForm((current) => ({ ...current, sale_price: event.target.value }))} />
       <input className="border border-[var(--border)] px-4 py-3" type="datetime-local" value={form.expires_at} onChange={(event) => setForm((current) => ({ ...current, expires_at: event.target.value }))} />

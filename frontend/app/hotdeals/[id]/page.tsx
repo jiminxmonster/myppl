@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import { HotdealLiveActions } from "@/components/hotdeal/hotdeal-live-actions";
 import { SafeImage } from "@/components/common/safe-image";
 import { PageNavigator } from "@/components/layout/page-navigator";
 import { SideCategoryMenu } from "@/components/layout/side-category-menu";
@@ -73,9 +72,7 @@ export default async function HotdealDetailPage({ params }: HotdealDetailPagePro
               <span className="rounded-[5px] bg-[var(--muted)] px-4 py-2">판매가 {Number(hotdeal.sale_price).toLocaleString()}원</span>
               <span className="rounded-[5px] bg-[var(--brand)] px-4 py-2 text-white">할인율 {hotdeal.discount_rate}%</span>
             </div>
-            <Link href={hotdeal.source_url} className="mt-8 inline-block rounded-[5px] bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white">
-              구매 링크 이동
-            </Link>
+            <HotdealLiveActions title={hotdeal.title} sourceUrl={hotdeal.source_url} liveUrl={hotdeal.live_url || undefined} />
           </article>
         </div>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Clock3, Heart, Star } from "lucide-react";
+import { Clock3, Heart, Radio, Star } from "lucide-react";
 
 import { SafeImage } from "@/components/common/safe-image";
 import { getProductPlaceholder, Hotdeal, resolveMediaUrl } from "@/lib/api";
@@ -33,7 +33,7 @@ export function HotdealBoard({ initialItems }: HotdealBoardProps) {
                 seed={`hotdeal-${item.id}-${item.title}`}
               />
               <div className="absolute left-4 top-4 flex items-center gap-2 rounded-[5px] bg-white px-3 py-1 text-xs font-semibold text-slate-900 shadow-sm">
-                <span>{item.status === "expired" ? "마감" : "핫딜"}</span>
+                <span>{item.status === "expired" ? "마감" : item.live_url ? "라이브" : "핫딜"}</span>
               </div>
               <div className="absolute right-4 top-4 rounded-[5px] bg-[#49c861] px-3 py-2 text-lg font-bold text-white">
                 -{item.discount_rate}%
@@ -69,8 +69,19 @@ export function HotdealBoard({ initialItems }: HotdealBoardProps) {
             </div>
             <div className="flex items-center gap-2 rounded-[5px] bg-[#eef9f5] px-4 py-3 text-sm font-semibold text-[#2e7d69]">
               <Clock3 className="h-4 w-4" />
-              {item.status === "expired" ? "마감된 핫딜" : "지금 바로 확인 가능"}
+              {item.status === "expired" ? "마감된 핫딜" : item.live_url ? "라이브 방송 연결 가능" : "지금 바로 확인 가능"}
             </div>
+            {item.live_url ? (
+              <a
+                href={item.live_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-[5px] bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white"
+              >
+                <Radio className="h-4 w-4" />
+                라이브 방송 보기
+              </a>
+            ) : null}
           </div>
         </article>
       ))}

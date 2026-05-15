@@ -42,6 +42,7 @@ class HotdealSerializer(serializers.ModelSerializer):
             "category_name",
             "category_slug",
             "source_url",
+            "live_url",
             "image",
             "original_price",
             "sale_price",

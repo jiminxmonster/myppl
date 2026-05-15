@@ -43,6 +43,7 @@ class Hotdeal(models.Model):
         blank=True,
     )
     source_url = models.URLField("구매 링크")
+    live_url = models.URLField("라이브 방송 링크", max_length=500, blank=True)
     image = models.ImageField("대표 이미지", upload_to="hotdeals/", blank=True, null=True)
     original_price = models.DecimalField("정가", max_digits=12, decimal_places=2)
     sale_price = models.DecimalField("판매가", max_digits=12, decimal_places=2)

@@ -12,6 +12,8 @@ type HomeProductCard = {
   subtitle: string;
   image?: string;
   href: string;
+  isExternal?: boolean;
+  actionLabel?: string;
   price?: string;
   originalPrice?: string;
 };
@@ -291,6 +293,11 @@ export function HomeProductSection({
                   <p className="text-xs text-slate-500 sm:text-sm">{item.subtitle}</p>
                   {item.originalPrice ? <p className="text-sm text-slate-400 line-through">{item.originalPrice}</p> : null}
                   {item.price ? <p className="text-base font-bold text-[var(--brand)] sm:text-lg">{item.price}</p> : null}
+                  {item.actionLabel ? (
+                    <p className="inline-flex rounded-[5px] bg-[var(--accent)] px-3 py-1 text-xs font-bold text-white">
+                      {item.actionLabel}
+                    </p>
+                  ) : null}
                 </div>
               </>
             );
@@ -304,6 +311,22 @@ export function HomeProductSection({
                 >
                   {cardContent}
                 </div>
+              );
+            }
+
+            if (item.isExternal) {
+              return (
+                <a
+                  key={`${item.id}-${index}`}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  draggable={false}
+                  data-home-product-card
+                  className={cardClassName}
+                >
+                  {cardContent}
+                </a>
               );
             }
 

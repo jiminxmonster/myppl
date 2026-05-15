@@ -178,6 +178,7 @@ export type Hotdeal = {
   category_name: string;
   category_slug: string;
   source_url: string;
+  live_url: string;
   image?: string | null;
   original_price: string;
   sale_price: string;
@@ -1490,6 +1491,7 @@ export async function createHotdeal(payload: {
   title: string;
   description: string;
   source_url: string;
+  live_url?: string;
   category?: number | null;
   original_price: string;
   sale_price: string;
@@ -1501,6 +1503,7 @@ export async function createHotdeal(payload: {
   formData.append("title", payload.title);
   formData.append("description", payload.description);
   formData.append("source_url", payload.source_url);
+  formData.append("live_url", payload.live_url ?? "");
   if (payload.category) {
     formData.append("category", String(payload.category));
   }
