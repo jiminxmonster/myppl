@@ -1240,8 +1240,6 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
               return (
                 <article
                   key={item.client_id}
-                  draggable
-                  onDragStart={(event) => handleHomeSectionDragStart(event, item.client_id)}
                   onDragOver={(event) => handleHomeSectionDragOver(event, item.client_id)}
                   onDragEnd={handleHomeSectionDragEnd}
                   className={`grid gap-4 rounded-[0.67rem] border p-5 transition-all md:grid-cols-[56px_1fr_auto] ${
@@ -1250,9 +1248,12 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
                 >
                   <button
                     type="button"
+                    draggable
+                    onDragStart={(event) => handleHomeSectionDragStart(event, item.client_id)}
+                    onDragEnd={handleHomeSectionDragEnd}
                     className="flex h-12 w-12 cursor-grab items-center justify-center rounded-[5px] border border-transparent text-slate-600 transition hover:border-[var(--border)] hover:bg-slate-50 active:cursor-grabbing"
                     aria-label="순서 이동"
-                    title="드래그해서 순서 이동"
+                    title="이 버튼을 드래그해서 순서 이동"
                   >
                     <span className="text-3xl leading-none">≡</span>
                   </button>
