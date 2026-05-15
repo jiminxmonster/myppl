@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
+import { Crown, Store } from "lucide-react";
+
 import { SafeImage } from "@/components/common/safe-image";
 
 type HomeProductCard = {
@@ -17,6 +19,7 @@ type HomeProductCard = {
 type DisplayCard = HomeProductCard & {
   isPlaceholder?: boolean;
   placeholderTone?: string;
+  rank?: number;
 };
 
 const PLACEHOLDER_TONES = [
@@ -27,6 +30,66 @@ const PLACEHOLDER_TONES = [
   "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)",
   "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)",
 ];
+
+function getRankBarClassName(rank: number) {
+  if (rank === 1) {
+    return "bg-[#f7d35f] text-[#4c3508]";
+  }
+  if (rank === 2) {
+    return "bg-[#d8dde6] text-[#334155]";
+  }
+  if (rank === 3) {
+    return "bg-[#c9854f] text-white";
+  }
+  if (rank >= 4 && rank <= 10) {
+    return "bg-orange-500 text-white";
+  }
+  if (rank >= 11 && rank <= 20) {
+    return "bg-emerald-600 text-white";
+  }
+  if (rank >= 21 && rank <= 30) {
+    return "bg-sky-600 text-white";
+  }
+  return "";
+}
+
+function getRankIconClassName(rank: number) {
+  if (rank === 1) {
+    return "text-[#8a5a00]";
+  }
+  if (rank === 2) {
+    return "text-[#64748b]";
+  }
+  if (rank === 3) {
+    return "text-[#7c3f18]";
+  }
+  return "";
+}
+
+function RankTopBar({ rank }: { rank: number }) {
+  const barClassName = getRankBarClassName(rank);
+
+  if (!barClassName) {
+    return null;
+  }
+
+  const isPodium = rank <= 3;
+  const iconClassName = getRankIconClassName(rank);
+
+  return (
+    <div className={`flex h-8 items-center justify-between px-3 text-xs font-black ${barClassName}`}>
+      <span className="inline-flex items-center gap-1">
+        {isPodium ? <Crown className={`h-4 w-4 ${iconClassName}`} fill="currentColor" /> : null}
+        <span>{rank}위</span>
+      </span>
+      {isPodium ? (
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/70">
+          <Store className={`h-3.5 w-3.5 ${iconClassName}`} />
+        </span>
+      ) : null}
+    </div>
+  );
+}
 
 export function HomeProductSection({
   title,
@@ -40,11 +103,13 @@ export function HomeProductSection({
   const minimumDeckCount = 12;
 
   const paddedItems = useMemo<DisplayCard[]>(() => {
-    if (items.length >= minimumDeckCount) {
-      return items;
+    const rankedItems = items.map((item, index) => ({ ...item, rank: index + 1 }));
+
+    if (rankedItems.length >= minimumDeckCount) {
+      return rankedItems;
     }
 
-    const placeholders = Array.from({ length: minimumDeckCount - items.length }, (_, index) => ({
+    const placeholders = Array.from({ length: minimumDeckCount - rankedItems.length }, (_, index) => ({
       id: 100000 + index,
       title: `추천 상품 슬롯 ${String(index + 1).padStart(2, "0")}`,
       subtitle: "추가 상품이 여기에 자동으로 채워집니다",
@@ -54,7 +119,7 @@ export function HomeProductSection({
       placeholderTone: PLACEHOLDER_TONES[index % PLACEHOLDER_TONES.length],
     }));
 
-    return [...items, ...placeholders];
+    return [...rankedItems, ...placeholders];
   }, [items]);
 
   const deck = useMemo(() => [...paddedItems, ...paddedItems], [paddedItems]);
@@ -85,6 +150,7 @@ export function HomeProductSection({
 
             const cardContent = (
               <>
+                {item.rank ? <RankTopBar rank={item.rank} /> : null}
                 <div
                   className="flex aspect-[5/4] items-center justify-center p-4 sm:p-5 lg:p-6"
                   style={{
