@@ -197,26 +197,26 @@ export default async function ProductsPage({
           </div>
 
           {productItems.length > 0 ? (
-            <div className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 sm:gap-4 xl:grid-cols-3 xl:gap-5">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-5 lg:gap-4">
               {productItems.map((item) => (
                 <Link
                   key={item.id}
                   href={item.href}
-                  className="overflow-hidden rounded-[0.67rem] border border-[var(--border)] bg-white shadow-soft transition hover:-translate-y-1"
+                  className="overflow-hidden rounded-[0.5rem] border border-[var(--border)] bg-white shadow-soft transition hover:-translate-y-0.5"
                 >
-                  <div className="flex aspect-square items-center justify-center bg-[var(--muted)]/30 p-3 sm:aspect-[5/4] sm:p-5">
+                  <div className="flex aspect-square items-center justify-center bg-[var(--muted)]/30 p-2 sm:p-3">
                     <SafeImage src={item.image} alt={item.title} className="h-full w-full object-contain" seed={`${item.kind}-${item.id}-${item.title}`} />
                   </div>
-                  <div className="space-y-2 p-3 sm:p-5">
-                    <p className="line-clamp-2 min-h-[3rem] text-base font-semibold leading-6 text-[var(--ink)] sm:min-h-[3.5rem] sm:text-lg sm:leading-7">{item.title}</p>
+                  <div className="space-y-1.5 p-2 sm:p-3">
+                    <p className="line-clamp-2 min-h-[2.25rem] text-[12px] font-bold leading-snug text-[var(--ink)] sm:min-h-[2.5rem] sm:text-sm">{item.title}</p>
                     {item.originalPrice && item.discountRate ? (
-                      <p className="flex items-baseline gap-1 text-sm font-semibold sm:text-base">
+                      <p className="flex items-baseline gap-1 text-[11px] font-semibold sm:text-xs">
                         <span className="text-red-600">{item.discountRate}%</span>
                         <span className="text-slate-400 line-through">{item.originalPrice}</span>
                       </p>
                     ) : null}
-                    <p className="text-2xl font-black leading-none text-slate-800 sm:text-3xl">{item.price}</p>
-                    <p className="text-sm font-semibold text-slate-500 sm:text-base">{item.shippingLabel}</p>
+                    <p className="truncate text-sm font-black text-[var(--brand)] sm:text-base">{item.price}</p>
+                    <p className="truncate text-[10px] font-semibold text-slate-500 sm:text-xs">{item.shippingLabel}</p>
                   </div>
                 </Link>
               ))}
