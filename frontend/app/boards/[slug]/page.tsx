@@ -38,7 +38,7 @@ export default async function BoardPage({ params }: BoardPageProps) {
         }
       />
       {isProductBoard ? (
-        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-5 lg:gap-4">
           {posts.length > 0 ? (
             posts.map((post) => {
               const salePrice = post.product_sale_price ? Number(post.product_sale_price).toLocaleString("ko-KR") : null;
@@ -46,12 +46,12 @@ export default async function BoardPage({ params }: BoardPageProps) {
               return (
                 <article
                   key={post.id}
-                  className="overflow-hidden rounded-[0.67rem] border border-[var(--border)] bg-white shadow-soft transition hover:-translate-y-1"
+                  className="overflow-hidden rounded-[0.5rem] border border-[var(--border)] bg-white shadow-soft transition hover:-translate-y-0.5"
                 >
                   <Link href={`/boards/${slug}/${post.id}`} className="block">
-                    <div className="relative flex aspect-square items-center justify-center bg-[var(--muted)]/30 p-4">
+                    <div className="relative flex aspect-square items-center justify-center bg-[var(--muted)]/30 p-2 sm:p-3">
                       {isLiveSpecialBoard && post.product_live_url ? (
-                        <span className="absolute left-3 top-3 rounded-[5px] bg-[var(--accent)] px-2.5 py-1 text-xs font-bold text-white">
+                        <span className="absolute left-1.5 top-1.5 rounded-[4px] bg-[var(--accent)] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white sm:left-2 sm:top-2">
                           라이브특가
                         </span>
                       ) : null}
@@ -62,22 +62,24 @@ export default async function BoardPage({ params }: BoardPageProps) {
                         seed={`board-product-${post.id}-${post.title}`}
                       />
                     </div>
-                    <div className="space-y-2 p-5">
-                      <p className="line-clamp-2 min-h-[3rem] text-base font-bold text-[var(--ink)]">{post.title}</p>
-                      {originalPrice ? <p className="text-sm text-slate-400 line-through">₩{originalPrice}</p> : null}
-                      <p className="text-xl font-black text-[var(--brand)]">{salePrice ? `₩${salePrice}` : "가격 문의"}</p>
-                      <p className="text-xs text-slate-500">조회 {post.views} · 댓글 {post.comment_count}</p>
+                    <div className="space-y-1.5 p-2 sm:p-3">
+                      <p className="line-clamp-2 min-h-[2.25rem] text-[12px] font-bold leading-snug text-[var(--ink)] sm:min-h-[2.5rem] sm:text-sm">
+                        {post.title}
+                      </p>
+                      {originalPrice ? <p className="truncate text-[11px] text-slate-400 line-through sm:text-xs">₩{originalPrice}</p> : null}
+                      <p className="truncate text-sm font-black text-[var(--brand)] sm:text-base">{salePrice ? `₩${salePrice}` : "가격 문의"}</p>
+                      <p className="truncate text-[10px] text-slate-500 sm:text-xs">조회 {post.views} · 댓글 {post.comment_count}</p>
                     </div>
                   </Link>
                   {isLiveSpecialBoard && post.product_live_url ? (
-                    <div className="px-5 pb-5">
+                    <div className="px-2 pb-2 sm:px-3 sm:pb-3">
                       <a
                         href={post.product_live_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex rounded-[5px] bg-[var(--accent)] px-3 py-1 text-xs font-bold text-white"
+                        className="inline-flex rounded-[4px] bg-[var(--accent)] px-2 py-1 text-[10px] font-bold text-white sm:text-xs"
                       >
-                        라이브 방송 보기
+                        라이브 보기
                       </a>
                     </div>
                   ) : null}
@@ -85,7 +87,7 @@ export default async function BoardPage({ params }: BoardPageProps) {
               );
             })
           ) : (
-            <div className="rounded-[0.67rem] border border-dashed border-[var(--border)] bg-white px-6 py-10 text-center text-sm text-slate-500 sm:col-span-2 xl:col-span-3">
+            <div className="col-span-3 rounded-[0.67rem] border border-dashed border-[var(--border)] bg-white px-6 py-10 text-center text-sm text-slate-500 sm:col-span-4 lg:col-span-5">
               아직 등록된 상품이 없습니다.
             </div>
           )}
