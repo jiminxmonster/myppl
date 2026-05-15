@@ -147,7 +147,11 @@ export function HomeProductSection({
       startScrollLeft: event.currentTarget.scrollLeft,
       hasMoved: false,
     };
-    event.currentTarget.setPointerCapture(event.pointerId);
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Some synthetic pointer events do not have an active pointer capture target.
+    }
   }
 
   function handleDragMove(event: PointerEvent<HTMLDivElement>) {
@@ -188,8 +192,12 @@ export function HomeProductSection({
       behavior: "smooth",
     });
 
-    if (container.hasPointerCapture(event.pointerId)) {
-      container.releasePointerCapture(event.pointerId);
+    try {
+      if (container.hasPointerCapture(event.pointerId)) {
+        container.releasePointerCapture(event.pointerId);
+      }
+    } catch {
+      // Ignore capture cleanup failures from non-native pointer event paths.
     }
     if (state.hasMoved) {
       suppressClickRef.current = true;
