@@ -433,10 +433,7 @@ export default function AdminBoardsPage() {
                 return (
                   <article
                     key={board.id}
-                    draggable
-                    onDragStart={() => handleDragStart(board.id)}
                     onDragOver={(e) => handleDragOver(e, board.id)}
-                    onDragEnd={handleDragEnd}
                     className={`flex flex-wrap items-center justify-between gap-4 rounded-[0.5rem] border bg-white p-5 transition-all duration-300 ease-out ${
                       draggedId === board.id
                         ? "scale-[0.99] border-[var(--brand)] opacity-60 shadow-lg"
@@ -446,9 +443,17 @@ export default function AdminBoardsPage() {
                     }`}
                   >
                   <div className="flex items-start gap-4">
-                    <div className="mt-1 cursor-grab text-slate-400 active:cursor-grabbing hover:text-slate-600">
+                    <button
+                      type="button"
+                      draggable
+                      onDragStart={() => handleDragStart(board.id)}
+                      onDragEnd={handleDragEnd}
+                      className="mt-1 cursor-grab rounded-[5px] p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 active:cursor-grabbing"
+                      aria-label={`${board.name} 순서 이동`}
+                      title="이 버튼을 드래그해서 순서 이동"
+                    >
                       <GripVertical className="h-5 w-5" />
-                    </div>
+                    </button>
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--brand)]">
                         {board.board_type === "product" && board.product_board_type === "live_special"
