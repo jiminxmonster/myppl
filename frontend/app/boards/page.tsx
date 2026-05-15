@@ -9,7 +9,7 @@ export default async function BoardsHubPage() {
   const boards = await getBoards().catch(() => []);
   const topBoards = boards
     .filter((board) => board.show_in_top_menu && !board.parent_id)
-    .sort((left, right) => left.id - right.id);
+    .sort((left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0) || left.id - right.id);
 
   return (
     <section className="space-y-8">
@@ -23,16 +23,24 @@ export default async function BoardsHubPage() {
       <div className="grid gap-6">
         {topBoards.map((board) => {
           const children = boards.filter((child) => child.parent_id === board.id);
+          const boardKindLabel =
+            board.board_type === "product"
+              ? board.product_board_type === "live_special"
+                ? "Live Special Grid"
+                : "Product Grid"
+              : board.audience === "seller"
+              ? "Seller Community"
+              : "Buyer Community";
 
           return (
             <section key={board.id} className="rounded-[0.67rem] border border-[var(--border)] bg-white p-6 shadow-soft">
               <div className="flex flex-col gap-4 border-b border-[var(--border)] pb-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--brand)]">
-                    {board.audience === "seller" ? "Seller Community" : "Buyer Community"}
+                    {boardKindLabel}
                   </p>
                   <h2 className="mt-2 text-2xl font-bold text-[var(--ink)]">{board.name}</h2>
-                  <p className="mt-2 text-sm text-slate-600">{board.description || "운영자가 켜고 끌 수 있는 상위 커뮤니티입니다."}</p>
+                  <p className="mt-2 text-sm text-slate-600">{board.description || "운영자가 켜고 끌 수 있는 상위 게시판입니다."}</p>
                 </div>
                 <Link href={`/boards/${board.slug}`} className="rounded-[5px] border border-[var(--border)] px-4 py-2 text-sm font-semibold">
                   게시판 바로가기

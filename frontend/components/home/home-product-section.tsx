@@ -93,11 +93,13 @@ export function HomeProductSection({
   description,
   items,
   viewAllHref,
+  showWhenEmpty = false,
 }: {
   title: string;
   description: string;
   items: HomeProductCard[];
   viewAllHref?: string;
+  showWhenEmpty?: boolean;
 }) {
   const minimumDeckCount = 12;
   const dragStateRef = useRef({
@@ -129,7 +131,7 @@ export function HomeProductSection({
     return [...rankedItems, ...placeholders];
   }, [items]);
 
-  if (items.length === 0) {
+  if (items.length === 0 && !showWhenEmpty) {
     return null;
   }
 

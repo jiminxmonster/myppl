@@ -258,6 +258,7 @@ export default async function HomePage() {
           description={section.description}
           items={section.items}
           viewAllHref={section.viewAllHref}
+          showWhenEmpty={section.source_type === "product_board"}
         />
       ))}
 

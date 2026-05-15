@@ -106,10 +106,10 @@ export default function AdminBoardsPage() {
       const created = await createAdminBoard(form);
       setBoards((current) => [...current, created].sort((a, b) => a.sort_order - b.sort_order));
       setForm(initialForm);
-      setNotice(`'${created.name}' 커뮤니티 게시판을 생성했습니다.`);
+      setNotice(`'${created.name}' 게시판을 생성했습니다.`);
       notifyBoardUpdate();
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "커뮤니티 게시판 생성에 실패했습니다.");
+      setError(requestError instanceof Error ? requestError.message : "게시판 생성에 실패했습니다.");
     }
   };
 
@@ -173,7 +173,7 @@ export default function AdminBoardsPage() {
       await deleteAdminBoard(board.id);
       setBoards((current) => current.filter((item) => item.id !== board.id));
       setError("");
-      setNotice(`'${board.name}' 커뮤니티 게시판을 삭제했습니다.`);
+      setNotice(`'${board.name}' 게시판을 삭제했습니다.`);
       notifyBoardUpdate();
     } catch (requestError) {
       if (axios.isAxiosError(requestError) && requestError.response?.status === 403) {
@@ -234,7 +234,7 @@ export default function AdminBoardsPage() {
       setEditingBoardId(null);
       setEditingForm({});
       setError("");
-      setNotice(`'${updated.name}' 커뮤니티 게시판을 수정했습니다.`);
+      setNotice(`'${updated.name}' 게시판을 수정했습니다.`);
       notifyBoardUpdate();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "게시판 수정에 실패했습니다.");
@@ -244,8 +244,8 @@ export default function AdminBoardsPage() {
   return (
     <div className="space-y-6">
       <section className="rounded-[0.67rem] border border-[var(--border)] bg-white p-6 shadow-soft">
-        <h2 className="text-2xl font-bold">커뮤니티 세부주제 관리</h2>
-        <p className="mt-2 text-sm text-slate-600">상단 커뮤니티 메뉴를 눌렀을 때 노출될 세부 게시판 목록입니다.</p>
+        <h2 className="text-2xl font-bold">게시판 / 그리드형 게시판 관리</h2>
+        <p className="mt-2 text-sm text-slate-600">일반 게시판과 상품/라이브특가 그리드형 게시판을 생성하고 상단 메뉴 노출을 관리합니다.</p>
         <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
           <input className="rounded-2xl border border-[var(--border)] px-4 py-3" placeholder="게시판 이름" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
           <select
@@ -254,7 +254,7 @@ export default function AdminBoardsPage() {
             onChange={(event) => setForm((current) => ({ ...current, board_type: event.target.value }))}
           >
             <option value="general">일반 게시판</option>
-            <option value="product">상품 게시판</option>
+            <option value="product">그리드형 상품게시판</option>
             <option value="notice">공지</option>
           </select>
           {form.board_type === "product" ? (
@@ -303,12 +303,12 @@ export default function AdminBoardsPage() {
           </label>
           {error ? <p className="text-sm text-red-600 md:col-span-2">{error}</p> : null}
           {notice ? <p className="text-sm text-emerald-700 md:col-span-2">{notice}</p> : null}
-          <button className="rounded-[5px] bg-[var(--brand)] px-5 py-3 text-sm font-semibold text-white md:col-span-2">커뮤니티 게시판 생성</button>
+          <button className="rounded-[5px] bg-[var(--brand)] px-5 py-3 text-sm font-semibold text-white md:col-span-2">게시판 생성</button>
         </form>
 
         <div className="mt-8 border-t border-[var(--border)] pt-8">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-bold">목록 정기/순서 관리</h3>
+            <h3 className="text-lg font-bold">목록 정렬/순서 관리</h3>
             {isOrderDirty ? (
               <div className="flex gap-2">
                 <button
@@ -385,7 +385,7 @@ export default function AdminBoardsPage() {
                             onChange={(event) => setEditingForm((current) => ({ ...current, board_type: event.target.value }))}
                           >
                             <option value="general">일반 게시판</option>
-                            <option value="product">상품 게시판</option>
+                            <option value="product">그리드형 상품게시판</option>
                             <option value="notice">공지</option>
                           </select>
                           {((editingForm.board_type as string | undefined) ?? board.board_type) === "product" ? (

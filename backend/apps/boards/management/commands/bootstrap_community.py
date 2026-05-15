@@ -33,7 +33,7 @@ class Command(BaseCommand):
         boards = self._ensure_boards()
         self._ensure_product_catalog(user=user)
         self._ensure_external_providers()
-        self._ensure_home_product_sections()
+        self._ensure_home_product_sections(boards=boards)
         self._ensure_hotdeal_categories()
         self._ensure_marketplace_categories()
 
@@ -141,6 +141,39 @@ class Command(BaseCommand):
                 "show_in_top_menu": True,
                 "audience": Board.AUDIENCE_ALL,
             },
+            {
+                "slug": "live-special",
+                "name": "라이브특가",
+                "board_type": Board.BOARD_PRODUCT,
+                "product_board_type": Board.PRODUCT_BOARD_LIVE_SPECIAL,
+                "description": "타사 라이브 방송 링크를 연결해 노출하는 라이브특가 그리드형 게시판입니다.",
+                "is_visible": True,
+                "show_in_top_menu": True,
+                "audience": Board.AUDIENCE_ALL,
+                "sort_order": 10,
+            },
+            {
+                "slug": "seller-hot-issues",
+                "name": "판매자 공유 핫이슈",
+                "board_type": Board.BOARD_PRODUCT,
+                "product_board_type": Board.PRODUCT_BOARD_STANDARD,
+                "description": "판매자 공유 핫이슈 상품을 그리드로 모아 보여주는 게시판입니다.",
+                "is_visible": True,
+                "show_in_top_menu": True,
+                "audience": Board.AUDIENCE_ALL,
+                "sort_order": 11,
+            },
+            {
+                "slug": "community-grid",
+                "name": "커뮤니티",
+                "board_type": Board.BOARD_PRODUCT,
+                "product_board_type": Board.PRODUCT_BOARD_STANDARD,
+                "description": "커뮤니티 상품형 게시물을 그리드로 모아 보여주는 게시판입니다.",
+                "is_visible": True,
+                "show_in_top_menu": True,
+                "audience": Board.AUDIENCE_ALL,
+                "sort_order": 12,
+            },
         ]
 
         boards = {}
@@ -148,7 +181,18 @@ class Command(BaseCommand):
             board, created = Board.objects.get_or_create(slug=board_spec["slug"], defaults=board_spec)
             if not created:
                 update_fields = []
-                for field in ("name", "board_type", "description", "is_visible", "show_in_top_menu", "audience"):
+                for field in (
+                    "name",
+                    "board_type",
+                    "product_board_type",
+                    "description",
+                    "is_visible",
+                    "show_in_top_menu",
+                    "audience",
+                    "sort_order",
+                ):
+                    if field not in board_spec:
+                        continue
                     if getattr(board, field) != board_spec[field]:
                         setattr(board, field, board_spec[field])
                         update_fields.append(field)
@@ -317,36 +361,41 @@ class Command(BaseCommand):
                 if update_fields:
                     provider.save(update_fields=update_fields)
 
-    def _ensure_home_product_sections(self):
-        """메인 홈의 조회수 기반 상품 슬라이드 섹션 기본값을 준비한다."""
+    def _ensure_home_product_sections(self, *, boards):
+        """메인 홈의 그리드형 상품 탭 기본값을 준비한다."""
         section_specs = [
             {
-                "title": "가전제품 조회수 높은 순",
-                "description": "조회수가 높은 가전/디지털 상품을 자동으로 슬라이드 노출합니다.",
-                "source_type": HomeProductSectionConfig.SOURCE_MARKETPLACE,
-                "category_keyword": "가전",
+                "title": "라이브특가",
+                "description": "라이브특가 그리드형 게시판 상품을 노출합니다.",
+                "source_type": HomeProductSectionConfig.SOURCE_PRODUCT_BOARD,
+                "board": boards.get("live-special"),
+                "category_keyword": "",
                 "item_limit": 30,
                 "sort_order": 0,
             },
             {
-                "title": "패션 조회수 높은 순",
-                "description": "패션/잡화 카테고리 상품 중 인기 높은 순으로 보여줍니다.",
-                "source_type": HomeProductSectionConfig.SOURCE_MARKETPLACE,
-                "category_keyword": "패션",
+                "title": "판매자 공유 핫이슈",
+                "description": "판매자 공유 핫이슈 그리드형 게시판 상품을 노출합니다.",
+                "source_type": HomeProductSectionConfig.SOURCE_PRODUCT_BOARD,
+                "board": boards.get("seller-hot-issues"),
+                "category_keyword": "",
                 "item_limit": 30,
                 "sort_order": 1,
             },
             {
-                "title": "식품 조회수 높은 순",
-                "description": "식품/건강 카테고리 상품 중 조회수 높은 상품만 모아서 노출합니다.",
-                "source_type": HomeProductSectionConfig.SOURCE_HOTDEAL,
-                "category_keyword": "식품",
+                "title": "커뮤니티",
+                "description": "커뮤니티 그리드형 게시판 상품을 노출합니다.",
+                "source_type": HomeProductSectionConfig.SOURCE_PRODUCT_BOARD,
+                "board": boards.get("community-grid"),
+                "category_keyword": "",
                 "item_limit": 30,
-                "sort_order": 2,
+                "sort_order": 3,
             },
         ]
 
         for section_spec in section_specs:
+            if section_spec["source_type"] == HomeProductSectionConfig.SOURCE_PRODUCT_BOARD and section_spec["board"] is None:
+                continue
             section, created = HomeProductSectionConfig.objects.get_or_create(
                 title=section_spec["title"],
                 defaults={**section_spec, "is_active": True},
@@ -354,8 +403,10 @@ class Command(BaseCommand):
             if created:
                 continue
             update_fields = []
-            for field in ("description", "source_type", "category_keyword", "item_limit", "sort_order"):
-                if getattr(section, field) != section_spec[field]:
+            for field in ("description", "source_type", "board", "category_keyword", "item_limit", "sort_order"):
+                current = section.board_id if field == "board" else getattr(section, field)
+                expected = section_spec[field].id if field == "board" and section_spec[field] is not None else section_spec[field]
+                if current != expected:
                     setattr(section, field, section_spec[field])
                     update_fields.append(field)
             if not section.is_active:
