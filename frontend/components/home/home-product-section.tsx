@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
-import { Crown, Store } from "lucide-react";
+import { useMemo, useRef, type MouseEvent, type PointerEvent } from "react";
+import { Crown } from "lucide-react";
 
 import { SafeImage } from "@/components/common/safe-image";
 
@@ -77,16 +77,11 @@ function RankTopBar({ rank }: { rank: number }) {
   const iconClassName = getRankIconClassName(rank);
 
   return (
-    <div className={`flex h-8 items-center justify-between px-3 text-xs font-black ${barClassName}`}>
+    <div className={`flex h-8 items-center px-3 text-xs font-black ${barClassName}`}>
       <span className="inline-flex items-center gap-1">
         {isPodium ? <Crown className={`h-4 w-4 ${iconClassName}`} fill="currentColor" /> : null}
         <span className="text-[1.3em] leading-none">{rank}</span>
       </span>
-      {isPodium ? (
-        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/70">
-          <Store className={`h-3.5 w-3.5 ${iconClassName}`} />
-        </span>
-      ) : null}
     </div>
   );
 }
@@ -101,6 +96,14 @@ export function HomeProductSection({
   items: HomeProductCard[];
 }) {
   const minimumDeckCount = 12;
+  const dragStateRef = useRef({
+    pointerId: -1,
+    isDragging: false,
+    startX: 0,
+    startScrollLeft: 0,
+    hasMoved: false,
+  });
+  const suppressClickRef = useRef(false);
 
   const paddedItems = useMemo<DisplayCard[]>(() => {
     const rankedItems = items.map((item, index) => ({ ...item, rank: index + 1 }));
@@ -122,11 +125,94 @@ export function HomeProductSection({
     return [...rankedItems, ...placeholders];
   }, [items]);
 
-  const deck = useMemo(() => [...paddedItems, ...paddedItems], [paddedItems]);
-  const animationSeconds = Math.max(36, paddedItems.length * 5);
-
   if (items.length === 0) {
     return null;
+  }
+
+  function clampPage(page: number, container: HTMLDivElement) {
+    const pageWidth = Math.max(container.clientWidth, 1);
+    const maxPage = Math.max(0, Math.ceil((container.scrollWidth - container.clientWidth) / pageWidth));
+    return Math.min(Math.max(page, 0), maxPage);
+  }
+
+  function handleDragStart(event: PointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+
+    dragStateRef.current = {
+      pointerId: event.pointerId,
+      isDragging: true,
+      startX: event.clientX,
+      startScrollLeft: event.currentTarget.scrollLeft,
+      hasMoved: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handleDragMove(event: PointerEvent<HTMLDivElement>) {
+    const state = dragStateRef.current;
+    if (!state.isDragging || state.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const deltaX = event.clientX - state.startX;
+    if (Math.abs(deltaX) > 6) {
+      state.hasMoved = true;
+      event.preventDefault();
+    }
+    event.currentTarget.scrollLeft = state.startScrollLeft - deltaX;
+  }
+
+  function handleDragEnd(event: PointerEvent<HTMLDivElement>) {
+    const state = dragStateRef.current;
+    if (!state.isDragging || state.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const container = event.currentTarget;
+    const pageWidth = Math.max(container.clientWidth, 1);
+    const deltaX = event.clientX - state.startX;
+    const threshold = Math.max(48, pageWidth * 0.12);
+    const startPage = Math.round(state.startScrollLeft / pageWidth);
+    let nextPage = Math.round(container.scrollLeft / pageWidth);
+
+    if (deltaX <= -threshold) {
+      nextPage = startPage + 1;
+    } else if (deltaX >= threshold) {
+      nextPage = startPage - 1;
+    }
+
+    container.scrollTo({
+      left: clampPage(nextPage, container) * pageWidth,
+      behavior: "smooth",
+    });
+
+    if (container.hasPointerCapture(event.pointerId)) {
+      container.releasePointerCapture(event.pointerId);
+    }
+    if (state.hasMoved) {
+      suppressClickRef.current = true;
+      window.setTimeout(() => {
+        suppressClickRef.current = false;
+      }, 120);
+    }
+
+    dragStateRef.current = {
+      pointerId: -1,
+      isDragging: false,
+      startX: 0,
+      startScrollLeft: 0,
+      hasMoved: false,
+    };
+  }
+
+  function handleCardClick(event: MouseEvent<HTMLDivElement>) {
+    if (!suppressClickRef.current) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
   }
 
   return (
@@ -139,14 +225,18 @@ export function HomeProductSection({
       </div>
       <div className="relative overflow-hidden">
         <div
-          className="home-product-marquee flex w-max gap-4"
-          style={{
-            animationDuration: `${animationSeconds}s`,
-          }}
+          className="home-product-scroller flex gap-4 overflow-x-auto scroll-smooth pb-2"
+          style={{ touchAction: "pan-y" }}
+          onPointerDown={handleDragStart}
+          onPointerMove={handleDragMove}
+          onPointerUp={handleDragEnd}
+          onPointerCancel={handleDragEnd}
+          onClickCapture={handleCardClick}
+          onDragStart={(event) => event.preventDefault()}
         >
-          {deck.map((item, index) => {
+          {paddedItems.map((item, index) => {
             const cardClassName =
-              "block w-[220px] shrink-0 overflow-hidden rounded-[0.67rem] border border-[var(--border)] bg-white shadow-soft transition hover:-translate-y-1 sm:w-[250px] lg:w-[270px]";
+              "block w-[220px] shrink-0 select-none overflow-hidden rounded-[0.67rem] border border-[var(--border)] bg-white shadow-soft transition hover:-translate-y-1 sm:w-[250px] lg:w-[270px]";
 
             const cardContent = (
               <>
@@ -189,6 +279,7 @@ export function HomeProductSection({
               <Link
                 key={`${item.id}-${index}`}
                 href={item.href}
+                draggable={false}
                 className={cardClassName}
               >
                 {cardContent}
@@ -197,23 +288,17 @@ export function HomeProductSection({
           })}
         </div>
         <style jsx>{`
-          .home-product-marquee {
-            animation-name: home-product-marquee;
-            animation-timing-function: linear;
-            animation-iteration-count: infinite;
+          .home-product-scroller {
+            cursor: grab;
+            scrollbar-width: none;
           }
 
-          .home-product-marquee:hover {
-            animation-play-state: paused;
+          .home-product-scroller:active {
+            cursor: grabbing;
           }
 
-          @keyframes home-product-marquee {
-            from {
-              transform: translateX(0);
-            }
-            to {
-              transform: translateX(-50%);
-            }
+          .home-product-scroller::-webkit-scrollbar {
+            display: none;
           }
         `}</style>
       </div>
