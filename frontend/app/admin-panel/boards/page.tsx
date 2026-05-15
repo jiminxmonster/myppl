@@ -47,6 +47,7 @@ function ToggleSwitch({
 const initialForm: Omit<AdminBoard, "id" | "slug" | "post_count"> = {
   name: "",
   board_type: "general",
+  product_board_type: "standard",
   parent: null as number | null,
   audience: "all",
   description: "",
@@ -210,6 +211,7 @@ export default function AdminBoardsPage() {
       name: board.name,
       parent: (board as AdminBoard & { parent?: number | null }).parent ?? null,
       board_type: board.board_type,
+      product_board_type: board.product_board_type ?? "standard",
       audience: (board as AdminBoard & { audience?: string }).audience ?? "all",
       description: board.description,
       is_visible: board.is_visible,
@@ -246,11 +248,27 @@ export default function AdminBoardsPage() {
         <p className="mt-2 text-sm text-slate-600">상단 커뮤니티 메뉴를 눌렀을 때 노출될 세부 게시판 목록입니다.</p>
         <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
           <input className="rounded-2xl border border-[var(--border)] px-4 py-3" placeholder="게시판 이름" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
-          <select className="rounded-2xl border border-[var(--border)] px-4 py-3" value={form.board_type} onChange={(event) => setForm((current) => ({ ...current, board_type: event.target.value }))}>
+          <select
+            className="rounded-2xl border border-[var(--border)] px-4 py-3"
+            value={form.board_type}
+            onChange={(event) => setForm((current) => ({ ...current, board_type: event.target.value }))}
+          >
             <option value="general">일반 게시판</option>
             <option value="product">상품 게시판</option>
             <option value="notice">공지</option>
           </select>
+          {form.board_type === "product" ? (
+            <select
+              className="rounded-2xl border border-[var(--border)] px-4 py-3"
+              value={form.product_board_type ?? "standard"}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, product_board_type: event.target.value as "standard" | "live_special" }))
+              }
+            >
+              <option value="standard">일반 상품</option>
+              <option value="live_special">라이브특가</option>
+            </select>
+          ) : null}
           <select
             className="rounded-2xl border border-[var(--border)] px-4 py-3"
             value={form.parent ?? ""}
@@ -334,7 +352,9 @@ export default function AdminBoardsPage() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--brand)]">
-                        {board.board_type}
+                        {board.board_type === "product" && board.product_board_type === "live_special"
+                          ? "product · live"
+                          : board.board_type}
                       </p>
                       <h2 className="mt-1 text-lg font-bold">{board.name}</h2>
                       <p className="mt-1 text-xs text-slate-500">
@@ -368,6 +388,21 @@ export default function AdminBoardsPage() {
                             <option value="product">상품 게시판</option>
                             <option value="notice">공지</option>
                           </select>
+                          {((editingForm.board_type as string | undefined) ?? board.board_type) === "product" ? (
+                            <select
+                              className="rounded-2xl border border-[var(--border)] px-4 py-3"
+                              value={(editingForm.product_board_type as string | undefined) ?? board.product_board_type ?? "standard"}
+                              onChange={(event) =>
+                                setEditingForm((current) => ({
+                                  ...current,
+                                  product_board_type: event.target.value as "standard" | "live_special",
+                                }))
+                              }
+                            >
+                              <option value="standard">일반 상품</option>
+                              <option value="live_special">라이브특가</option>
+                            </select>
+                          ) : null}
                           <select
                             className="rounded-2xl border border-[var(--border)] px-4 py-3"
                             value={(editingForm.parent as number | null | undefined) ?? ""}

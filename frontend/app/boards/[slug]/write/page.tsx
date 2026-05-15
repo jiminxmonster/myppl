@@ -18,6 +18,7 @@ export default function WritePage({ params }: WritePageProps) {
   const [content, setContent] = useState("");
   const [productOriginalPrice, setProductOriginalPrice] = useState("");
   const [productSalePrice, setProductSalePrice] = useState("");
+  const [productLiveUrl, setProductLiveUrl] = useState("");
   const [images, setImages] = useState<FileList | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,6 +28,8 @@ export default function WritePage({ params }: WritePageProps) {
       .then((item) => setBoard(item))
       .catch(() => setError("게시판을 찾을 수 없습니다."));
   }, [params.slug]);
+  const isProductBoard = board?.board_type === "product";
+  const isLiveSpecialBoard = isProductBoard && board?.product_board_type === "live_special";
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -47,8 +50,9 @@ export default function WritePage({ params }: WritePageProps) {
         title,
         content,
         images,
-        product_original_price: board?.board_type === "product" ? productOriginalPrice : "",
-        product_sale_price: board?.board_type === "product" ? productSalePrice : "",
+        product_original_price: isProductBoard ? productOriginalPrice : "",
+        product_sale_price: isProductBoard ? productSalePrice : "",
+        product_live_url: isLiveSpecialBoard ? productLiveUrl.trim() : "",
       });
       router.push(`/boards/${params.slug}/${post.id}`);
     } catch (submitError) {
@@ -79,7 +83,7 @@ export default function WritePage({ params }: WritePageProps) {
             onChange={(event) => setTitle(event.target.value)}
           />
         </label>
-        {board?.board_type === "product" ? (
+        {isProductBoard ? (
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block space-y-2">
               <span className="text-sm font-medium">원래가격</span>
@@ -101,6 +105,18 @@ export default function WritePage({ params }: WritePageProps) {
                 onChange={(event) => setProductSalePrice(event.target.value)}
               />
             </label>
+            {isLiveSpecialBoard ? (
+              <label className="block space-y-2 md:col-span-2">
+                <span className="text-sm font-medium">타사 라이브 방송 링크</span>
+                <input
+                  type="url"
+                  className="w-full rounded-[5px] border border-[var(--border)] px-4 py-3 outline-none"
+                  placeholder="https://..."
+                  value={productLiveUrl}
+                  onChange={(event) => setProductLiveUrl(event.target.value)}
+                />
+              </label>
+            ) : null}
           </div>
         ) : null}
         <label className="block space-y-2">

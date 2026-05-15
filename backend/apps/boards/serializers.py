@@ -20,6 +20,7 @@ class BoardSerializer(serializers.ModelSerializer):
             "slug",
             "parent_id",
             "board_type",
+            "product_board_type",
             "audience",
             "description",
             "show_in_top_menu",
@@ -88,6 +89,7 @@ class PostListSerializer(serializers.ModelSerializer):
     board_name = serializers.CharField(source="board.name", read_only=True)
     board_slug = serializers.CharField(source="board.slug", read_only=True)
     board_type = serializers.CharField(source="board.board_type", read_only=True)
+    board_product_board_type = serializers.CharField(source="board.product_board_type", read_only=True)
     notice_start = serializers.DateTimeField(read_only=True)
     notice_end = serializers.DateTimeField(read_only=True)
 
@@ -101,9 +103,11 @@ class PostListSerializer(serializers.ModelSerializer):
             "board_name",
             "board_slug",
             "board_type",
+            "board_product_board_type",
             "thumbnail_image",
             "product_original_price",
             "product_sale_price",
+            "product_live_url",
             "is_deleted",
             "is_blinded",
             "is_notice",
@@ -142,6 +146,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
 
     author_nickname = serializers.CharField(source="author.nickname", read_only=True)
     board_type = serializers.CharField(source="board.board_type", read_only=True)
+    board_product_board_type = serializers.CharField(source="board.product_board_type", read_only=True)
     images = PostImageSerializer(many=True, read_only=True)
     comments = serializers.SerializerMethodField()
 
@@ -151,12 +156,14 @@ class PostDetailSerializer(serializers.ModelSerializer):
             "id",
             "board",
             "board_type",
+            "board_product_board_type",
             "author",
             "author_nickname",
             "title",
             "content",
             "product_original_price",
             "product_sale_price",
+            "product_live_url",
             "views",
             "likes",
             "is_notice",
@@ -195,7 +202,16 @@ class PostWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Post
-        fields = ("id", "title", "content", "product_original_price", "product_sale_price", "images", "remove_image_ids")
+        fields = (
+            "id",
+            "title",
+            "content",
+            "product_original_price",
+            "product_sale_price",
+            "product_live_url",
+            "images",
+            "remove_image_ids",
+        )
 
     def to_internal_value(self, data):
         mutable_data = data.copy()
@@ -225,6 +241,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
         instance.content = validated_data.get("content", instance.content)
         instance.product_original_price = validated_data.get("product_original_price", instance.product_original_price)
         instance.product_sale_price = validated_data.get("product_sale_price", instance.product_sale_price)
+        instance.product_live_url = validated_data.get("product_live_url", instance.product_live_url)
         instance.save()
         if remove_image_ids:
             instance.images.filter(id__in=remove_image_ids).delete()

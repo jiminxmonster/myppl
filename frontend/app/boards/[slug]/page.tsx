@@ -18,6 +18,7 @@ export default async function BoardPage({ params }: BoardPageProps) {
   }
 
   const isProductBoard = board.board_type === "product";
+  const isLiveSpecialBoard = isProductBoard && board.product_board_type === "live_special";
 
   return (
     <section className="space-y-6">
@@ -43,26 +44,44 @@ export default async function BoardPage({ params }: BoardPageProps) {
               const salePrice = post.product_sale_price ? Number(post.product_sale_price).toLocaleString("ko-KR") : null;
               const originalPrice = post.product_original_price ? Number(post.product_original_price).toLocaleString("ko-KR") : null;
               return (
-                <Link
+                <article
                   key={post.id}
-                  href={`/boards/${slug}/${post.id}`}
                   className="overflow-hidden rounded-[0.67rem] border border-[var(--border)] bg-white shadow-soft transition hover:-translate-y-1"
                 >
-                  <div className="flex aspect-square items-center justify-center bg-[var(--muted)]/30 p-4">
-                    <SafeImage
-                      src={resolveMediaUrl(post.thumbnail_image || getProductPlaceholder("marketplace", board.name))}
-                      alt={`${post.title} 상품 이미지`}
-                      className="h-full w-full object-contain"
-                      seed={`board-product-${post.id}-${post.title}`}
-                    />
-                  </div>
-                  <div className="space-y-2 p-5">
-                    <p className="line-clamp-2 min-h-[3rem] text-base font-bold text-[var(--ink)]">{post.title}</p>
-                    {originalPrice ? <p className="text-sm text-slate-400 line-through">₩{originalPrice}</p> : null}
-                    <p className="text-xl font-black text-[var(--brand)]">{salePrice ? `₩${salePrice}` : "가격 문의"}</p>
-                    <p className="text-xs text-slate-500">조회 {post.views} · 댓글 {post.comment_count}</p>
-                  </div>
-                </Link>
+                  <Link href={`/boards/${slug}/${post.id}`} className="block">
+                    <div className="relative flex aspect-square items-center justify-center bg-[var(--muted)]/30 p-4">
+                      {isLiveSpecialBoard && post.product_live_url ? (
+                        <span className="absolute left-3 top-3 rounded-[5px] bg-[var(--accent)] px-2.5 py-1 text-xs font-bold text-white">
+                          라이브특가
+                        </span>
+                      ) : null}
+                      <SafeImage
+                        src={resolveMediaUrl(post.thumbnail_image || getProductPlaceholder("marketplace", board.name))}
+                        alt={`${post.title} 상품 이미지`}
+                        className="h-full w-full object-contain"
+                        seed={`board-product-${post.id}-${post.title}`}
+                      />
+                    </div>
+                    <div className="space-y-2 p-5">
+                      <p className="line-clamp-2 min-h-[3rem] text-base font-bold text-[var(--ink)]">{post.title}</p>
+                      {originalPrice ? <p className="text-sm text-slate-400 line-through">₩{originalPrice}</p> : null}
+                      <p className="text-xl font-black text-[var(--brand)]">{salePrice ? `₩${salePrice}` : "가격 문의"}</p>
+                      <p className="text-xs text-slate-500">조회 {post.views} · 댓글 {post.comment_count}</p>
+                    </div>
+                  </Link>
+                  {isLiveSpecialBoard && post.product_live_url ? (
+                    <div className="px-5 pb-5">
+                      <a
+                        href={post.product_live_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex rounded-[5px] bg-[var(--accent)] px-3 py-1 text-xs font-bold text-white"
+                      >
+                        라이브 방송 보기
+                      </a>
+                    </div>
+                  ) : null}
+                </article>
               );
             })
           ) : (

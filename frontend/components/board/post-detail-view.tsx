@@ -6,6 +6,7 @@ import { getPostDetail, PostDetail, resolveMediaUrl } from "@/lib/api";
 import { CommentSection } from "@/components/board/comment-section";
 import { PostLikeButton } from "@/components/board/post-like-button";
 import { PostOwnerActions } from "@/components/board/post-owner-actions";
+import { ProductLiveActions } from "@/components/board/product-live-actions";
 import { PostReportButton } from "@/components/board/post-report-button";
 
 type PostDetailViewProps = {
@@ -21,6 +22,7 @@ export function PostDetailView({ slug, postId, initialPost }: PostDetailViewProp
   const galleryImages = isProductPost ? post.images.slice(1) : post.images;
   const originalPrice = post.product_original_price ? Number(post.product_original_price).toLocaleString("ko-KR") : null;
   const salePrice = post.product_sale_price ? Number(post.product_sale_price).toLocaleString("ko-KR") : null;
+  const isLiveSpecialPost = post.board_product_board_type === "live_special" && Boolean(post.product_live_url);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,6 +75,9 @@ export function PostDetailView({ slug, postId, initialPost }: PostDetailViewProp
               <p className="text-sm font-semibold text-slate-500">상품 정보</p>
               {originalPrice ? <p className="text-lg text-slate-400 line-through">₩{originalPrice}</p> : null}
               <p className="text-3xl font-black text-[var(--brand)]">{salePrice ? `₩${salePrice}` : "가격 문의"}</p>
+              {isLiveSpecialPost && post.product_live_url ? (
+                <ProductLiveActions title={post.title} liveUrl={post.product_live_url} />
+              ) : null}
             </aside>
           </div>
         ) : null}

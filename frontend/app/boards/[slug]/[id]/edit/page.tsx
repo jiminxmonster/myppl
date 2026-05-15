@@ -27,6 +27,7 @@ export default function EditPostPage({ params }: EditPageProps) {
   const [content, setContent] = useState("");
   const [productOriginalPrice, setProductOriginalPrice] = useState("");
   const [productSalePrice, setProductSalePrice] = useState("");
+  const [productLiveUrl, setProductLiveUrl] = useState("");
   const [images, setImages] = useState<FileList | null>(null);
   const [existingImages, setExistingImages] = useState<ExistingImageItem[]>([]);
   const [removeImageIds, setRemoveImageIds] = useState<number[]>([]);
@@ -66,6 +67,7 @@ export default function EditPostPage({ params }: EditPageProps) {
         setContent(post.content);
         setProductOriginalPrice(post.product_original_price ?? "");
         setProductSalePrice(post.product_sale_price ?? "");
+        setProductLiveUrl(post.product_live_url ?? "");
         setBoard(boardItem);
         setExistingImages(
           post.images.map((image) => ({
@@ -117,6 +119,8 @@ export default function EditPostPage({ params }: EditPageProps) {
         removeImageIds,
         product_original_price: board?.board_type === "product" ? productOriginalPrice : "",
         product_sale_price: board?.board_type === "product" ? productSalePrice : "",
+        product_live_url:
+          board?.board_type === "product" && board.product_board_type === "live_special" ? productLiveUrl.trim() : "",
       });
       router.push(`/boards/${params.slug}/${post.id}`);
       router.refresh();
@@ -189,6 +193,18 @@ export default function EditPostPage({ params }: EditPageProps) {
                 onChange={(event) => setProductSalePrice(event.target.value)}
               />
             </label>
+            {board.product_board_type === "live_special" ? (
+              <label className="block space-y-2 md:col-span-2">
+                <span className="text-sm font-medium">타사 라이브 방송 링크</span>
+                <input
+                  type="url"
+                  className="w-full rounded-[5px] border border-[var(--border)] px-4 py-3 outline-none"
+                  placeholder="https://..."
+                  value={productLiveUrl}
+                  onChange={(event) => setProductLiveUrl(event.target.value)}
+                />
+              </label>
+            ) : null}
           </div>
         ) : null}
         {existingImages.length > 0 ? (

@@ -70,9 +70,14 @@ export type PostSummary = {
   title: string;
   author_nickname: string;
   thumbnail_image: string | null;
+  board_id?: number;
+  board_name?: string;
+  board_slug?: string;
   board_type?: string;
+  board_product_board_type?: string;
   product_original_price?: string | null;
   product_sale_price?: string | null;
+  product_live_url?: string;
   views: number;
   likes: number;
   comment_count: number;
@@ -85,6 +90,7 @@ export type BoardItem = {
   slug: string;
   parent_id: number | null;
   board_type: string;
+  product_board_type?: "standard" | "live_special";
   audience: "all" | "buyer" | "seller";
   description: string;
   show_in_top_menu: boolean;
@@ -114,12 +120,14 @@ export type PostDetail = {
   id: number;
   board: number;
   board_type?: string;
+  board_product_board_type?: string;
   author: number;
   author_nickname: string;
   title: string;
   content: string;
   product_original_price?: string | null;
   product_sale_price?: string | null;
+  product_live_url?: string;
   views: number;
   likes: number;
   images: { id: number; image: string; created_at: string }[];
@@ -342,6 +350,7 @@ export type AdminBoard = {
   slug: string;
   parent?: number | null;
   board_type: string;
+  product_board_type?: "standard" | "live_special";
   audience?: "all" | "buyer" | "seller";
   description: string;
   icon: string;
@@ -506,11 +515,18 @@ export type CatalogReferenceImage = {
   is_active: boolean;
 };
 
+export type HomeProductSectionSource = "recent_search" | "hotdeal" | "marketplace" | "product_board";
+
 export type HomeProductSectionConfig = {
   id: number;
   title: string;
   description: string;
-  source_type: "recent_search" | "hotdeal" | "marketplace";
+  source_type: HomeProductSectionSource;
+  board?: number | null;
+  board_name?: string | null;
+  board_slug?: string | null;
+  board_type?: string | null;
+  board_product_board_type?: "standard" | "live_special" | null;
   category_keyword: string;
   item_limit: number;
   sort_order: number;
@@ -1389,6 +1405,7 @@ export async function createPost(
     images?: FileList | null;
     product_original_price?: string;
     product_sale_price?: string;
+    product_live_url?: string;
   }
 ) {
   const { accessToken } = getStoredTokens();
@@ -1397,6 +1414,7 @@ export async function createPost(
   formData.append("content", payload.content);
   formData.append("product_original_price", payload.product_original_price ?? "");
   formData.append("product_sale_price", payload.product_sale_price ?? "");
+  formData.append("product_live_url", payload.product_live_url ?? "");
 
   Array.from(payload.images ?? []).forEach((image) => {
     formData.append("images", image);
@@ -1421,6 +1439,7 @@ export async function updatePost(
     removeImageIds?: number[];
     product_original_price?: string;
     product_sale_price?: string;
+    product_live_url?: string;
   }
 ) {
   const { accessToken } = getStoredTokens();
@@ -1429,6 +1448,7 @@ export async function updatePost(
   formData.append("content", payload.content);
   formData.append("product_original_price", payload.product_original_price ?? "");
   formData.append("product_sale_price", payload.product_sale_price ?? "");
+  formData.append("product_live_url", payload.product_live_url ?? "");
   (payload.removeImageIds ?? []).forEach((imageId) => {
     formData.append("remove_image_ids", String(imageId));
   });

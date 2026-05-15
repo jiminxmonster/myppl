@@ -92,10 +92,12 @@ export function HomeProductSection({
   title,
   description,
   items,
+  viewAllHref,
 }: {
   title: string;
   description: string;
   items: HomeProductCard[];
+  viewAllHref?: string;
 }) {
   const minimumDeckCount = 12;
   const dragStateRef = useRef({
@@ -255,6 +257,14 @@ export function HomeProductSection({
           <h2 className="text-2xl font-bold text-[var(--ink)]">{title}</h2>
           <p className="mt-1 text-sm text-slate-500">{description}</p>
         </div>
+        {viewAllHref ? (
+          <Link
+            href={viewAllHref}
+            className="shrink-0 rounded-[5px] border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--ink)]"
+          >
+            전체보기
+          </Link>
+        ) : null}
       </div>
       <div className="relative overflow-hidden">
         <div

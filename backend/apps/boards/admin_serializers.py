@@ -19,6 +19,7 @@ class AdminBoardSerializer(serializers.ModelSerializer):
             "slug",
             "parent",
             "board_type",
+            "product_board_type",
             "audience",
             "description",
             "icon",

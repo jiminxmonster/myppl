@@ -12,6 +12,7 @@ import {
   getMarketplaceItems,
   getProductPlaceholder,
   resolveMediaUrl,
+  type HomeProductSectionConfig,
 } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
@@ -107,21 +108,30 @@ export default async function HomePage() {
   const activeHeroSlides: HeroSlide[] =
     configuredHeroSlides.length > 0 ? (configuredHeroSlides as HeroSlide[]) : (fallbackHeroSlides as HeroSlide[]);
 
-  const configuredHomeSections =
-    homeSections.length > 0
-      ? homeSections
-      : [
-          {
-            id: 0,
-            title: "최근많이 검색된 상품",
-            description: "",
-            source_type: "recent_search" as const,
-            category_keyword: "",
-            item_limit: 12,
-            sort_order: 0,
-            is_active: true,
-          },
-        ];
+  const fallbackHomeSections: HomeProductSectionConfig[] = [
+    {
+      id: 0,
+      title: "최근많이 검색된 상품",
+      description: "",
+      source_type: "recent_search",
+      board: null,
+      category_keyword: "",
+      item_limit: 12,
+      sort_order: 0,
+      is_active: true,
+    },
+  ];
+  const configuredHomeSections: HomeProductSectionConfig[] =
+    homeSections.length > 0 ? homeSections : fallbackHomeSections;
+  const productBoardPostEntries = await Promise.all(
+    configuredHomeSections
+      .filter((section) => section.source_type === "product_board" && section.board_slug)
+      .map(async (section) => ({
+        sectionId: section.id,
+        posts: await getBoardPosts(section.board_slug as string).catch(() => []),
+      })),
+  );
+  const productBoardPostsBySectionId = new Map(productBoardPostEntries.map((entry) => [entry.sectionId, entry.posts]));
 
   const productSections = configuredHomeSections
     .map((section) => {
@@ -157,6 +167,27 @@ export default async function HomePage() {
           originalPrice: item.original_price ? `₩${Number(item.original_price).toLocaleString("ko-KR")}` : undefined,
           viewCount: item.view_count,
         }));
+      const productBoardCards = [...(productBoardPostsBySectionId.get(section.id) ?? [])]
+        .sort((left, right) => right.views - left.views)
+        .map((item) => {
+          const category = section.board_name || item.board_name || "상품게시판";
+          const liveUrl =
+            section.board_product_board_type === "live_special" && item.product_live_url ? item.product_live_url : "";
+          return {
+            id: item.id,
+            key: `board-${section.board_slug}-${item.id}`,
+            title: item.title,
+            category,
+            subtitle: `${category} · 조회 ${item.views}`,
+            image: resolveMediaUrl(item.thumbnail_image || getProductPlaceholder("marketplace", category)),
+            href: liveUrl || `/boards/${section.board_slug}/${item.id}`,
+            isExternal: Boolean(liveUrl),
+            actionLabel: liveUrl ? "라이브 방송 보기" : undefined,
+            price: item.product_sale_price ? `₩${Number(item.product_sale_price).toLocaleString("ko-KR")}` : "가격 문의",
+            originalPrice: item.product_original_price ? `₩${Number(item.product_original_price).toLocaleString("ko-KR")}` : undefined,
+            viewCount: item.views,
+          };
+        });
       const sourceItems =
         section.source_type === "recent_search"
           ? (() => {
@@ -188,6 +219,14 @@ export default async function HomePage() {
               const candidate = filtered.length > 0 ? filtered : hotdealCards;
               return candidate.slice(0, limit);
             })()
+          : section.source_type === "product_board"
+          ? (() => {
+              const filtered = keyword
+                ? productBoardCards.filter((item) => item.category.includes(keyword) || item.title.includes(keyword))
+                : productBoardCards;
+              const candidate = filtered.length > 0 ? filtered : productBoardCards;
+              return candidate.slice(0, limit);
+            })()
           : (() => {
               const filtered = keyword ? marketplaceCards.filter((item) => item.category.includes(keyword) || item.title.includes(keyword)) : marketplaceCards;
               const candidate = filtered.length > 0 ? filtered : marketplaceCards;
@@ -197,6 +236,14 @@ export default async function HomePage() {
       return {
         ...section,
         items: sourceItems,
+        viewAllHref:
+          section.source_type === "product_board" && section.board_slug
+            ? `/boards/${section.board_slug}`
+            : section.source_type === "hotdeal"
+            ? "/hotdeals"
+            : section.source_type === "marketplace"
+            ? "/marketplace"
+            : undefined,
       };
     });
 
@@ -210,6 +257,7 @@ export default async function HomePage() {
           title={section.title}
           description={section.description}
           items={section.items}
+          viewAllHref={section.viewAllHref}
         />
       ))}
 

@@ -156,15 +156,25 @@ class HomeProductSectionConfig(models.Model):
     SOURCE_RECENT_SEARCH = "recent_search"
     SOURCE_HOTDEAL = "hotdeal"
     SOURCE_MARKETPLACE = "marketplace"
+    SOURCE_PRODUCT_BOARD = "product_board"
     SOURCE_CHOICES = [
         (SOURCE_RECENT_SEARCH, "최근검색상품"),
         (SOURCE_HOTDEAL, "핫딜"),
         (SOURCE_MARKETPLACE, "중고장터"),
+        (SOURCE_PRODUCT_BOARD, "상품게시판"),
     ]
 
     title = models.CharField("섹션 제목", max_length=120)
     description = models.CharField("섹션 설명", max_length=255, blank=True)
     source_type = models.CharField("데이터 소스", max_length=20, choices=SOURCE_CHOICES, default=SOURCE_MARKETPLACE)
+    board = models.ForeignKey(
+        "boards.Board",
+        verbose_name="연결 상품게시판",
+        related_name="home_product_sections",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
     category_keyword = models.CharField("카테고리 키워드", max_length=120, blank=True)
     item_limit = models.PositiveIntegerField("노출 개수", default=8)
     sort_order = models.PositiveIntegerField("정렬 순서", default=0)

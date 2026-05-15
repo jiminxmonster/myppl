@@ -33,6 +33,11 @@ class CategoryReferenceImageSerializer(serializers.ModelSerializer):
 
 
 class HomeProductSectionConfigSerializer(serializers.ModelSerializer):
+    board_name = serializers.CharField(source="board.name", read_only=True)
+    board_slug = serializers.CharField(source="board.slug", read_only=True)
+    board_type = serializers.CharField(source="board.board_type", read_only=True)
+    board_product_board_type = serializers.CharField(source="board.product_board_type", read_only=True)
+
     class Meta:
         model = HomeProductSectionConfig
         fields = (
@@ -40,11 +45,26 @@ class HomeProductSectionConfigSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "source_type",
+            "board",
+            "board_name",
+            "board_slug",
+            "board_type",
+            "board_product_board_type",
             "category_keyword",
             "item_limit",
             "sort_order",
             "is_active",
         )
+
+    def validate(self, attrs):
+        source_type = attrs.get("source_type", getattr(self.instance, "source_type", None))
+        board = attrs.get("board", getattr(self.instance, "board", None))
+        if source_type == HomeProductSectionConfig.SOURCE_PRODUCT_BOARD:
+            if board is None:
+                raise serializers.ValidationError({"board": "상품게시판 소스는 연결할 게시판을 선택해야 합니다."})
+            if board.board_type != "product":
+                raise serializers.ValidationError({"board": "상품게시판 유형의 게시판만 연결할 수 있습니다."})
+        return attrs
 
 
 class SiteDisplaySettingSerializer(serializers.ModelSerializer):

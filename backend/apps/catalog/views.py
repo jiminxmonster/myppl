@@ -323,7 +323,7 @@ class HomeProductSectionConfigListView(generics.ListAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        return HomeProductSectionConfig.objects.filter(is_active=True).order_by("sort_order", "id")
+        return HomeProductSectionConfig.objects.select_related("board").filter(is_active=True).order_by("sort_order", "id")
 
 
 class SiteDisplaySettingView(APIView):
@@ -357,13 +357,13 @@ class AdminHomeProductSectionConfigListCreateView(generics.ListCreateAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        return HomeProductSectionConfig.objects.all().order_by("sort_order", "id")
+        return HomeProductSectionConfig.objects.select_related("board").all().order_by("sort_order", "id")
 
 
 class AdminHomeProductSectionConfigDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = HomeProductSectionConfigSerializer
     permission_classes = [IsAdminOrModerator]
-    queryset = HomeProductSectionConfig.objects.all().order_by("sort_order", "id")
+    queryset = HomeProductSectionConfig.objects.select_related("board").all().order_by("sort_order", "id")
     lookup_url_kwarg = "section_id"
 
 

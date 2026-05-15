@@ -99,9 +99,9 @@ class SellerOptionPresetAdmin(admin.ModelAdmin):
 
 @admin.register(HomeProductSectionConfig)
 class HomeProductSectionConfigAdmin(admin.ModelAdmin):
-    list_display = ("title", "source_type", "category_keyword", "item_limit", "sort_order", "is_active")
+    list_display = ("title", "source_type", "board", "category_keyword", "item_limit", "sort_order", "is_active")
     list_filter = ("source_type", "is_active")
-    search_fields = ("title", "category_keyword")
+    search_fields = ("title", "category_keyword", "board__name")
 
 
 @admin.register(SiteDisplaySetting)

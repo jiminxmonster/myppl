@@ -18,6 +18,12 @@ class Board(models.Model):
         (BOARD_MARKETPLACE, "중고장터"),
         (BOARD_NOTICE, "공지"),
     ]
+    PRODUCT_BOARD_STANDARD = "standard"
+    PRODUCT_BOARD_LIVE_SPECIAL = "live_special"
+    PRODUCT_BOARD_TYPE_CHOICES = [
+        (PRODUCT_BOARD_STANDARD, "일반 상품"),
+        (PRODUCT_BOARD_LIVE_SPECIAL, "라이브특가"),
+    ]
     READ_PUBLIC = "public"
     READ_MEMBER = "member"
     READ_GRADE = "grade"
@@ -39,6 +45,12 @@ class Board(models.Model):
     slug = models.SlugField("게시판 슬러그", unique=True)
     parent = models.ForeignKey("self", related_name="children", null=True, blank=True, on_delete=models.CASCADE)
     board_type = models.CharField("게시판 종류", max_length=20, choices=BOARD_TYPE_CHOICES, default=BOARD_GENERAL)
+    product_board_type = models.CharField(
+        "상품게시판 옵션",
+        max_length=20,
+        choices=PRODUCT_BOARD_TYPE_CHOICES,
+        default=PRODUCT_BOARD_STANDARD,
+    )
     audience = models.CharField("대상 회원", max_length=20, choices=AUDIENCE_CHOICES, default=AUDIENCE_ALL)
     description = models.TextField("게시판 설명", blank=True)
     icon = models.CharField("게시판 아이콘", max_length=10, blank=True)
@@ -81,6 +93,7 @@ class Post(models.Model):
     content = models.TextField("본문")
     product_original_price = models.DecimalField("상품 원래가격", max_digits=12, decimal_places=0, null=True, blank=True)
     product_sale_price = models.DecimalField("상품 현재가격", max_digits=12, decimal_places=0, null=True, blank=True)
+    product_live_url = models.URLField("상품 라이브 방송 링크", max_length=500, blank=True)
     views = models.PositiveIntegerField("조회수", default=0)
     likes = models.PositiveIntegerField("추천수", default=0)
     is_notice = models.BooleanField("공지 여부", default=False)

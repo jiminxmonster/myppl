@@ -3,6 +3,7 @@
 import { DragEvent, FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
+  AdminBoard,
   AdminExternalProvider,
   CatalogCategory,
   CatalogCategoryMapping,
@@ -14,6 +15,7 @@ import {
   ExternalCatalogAttribute,
   ExternalCatalogCategory,
   HomeProductSectionConfig,
+  HomeProductSectionSource,
   SiteDisplaySettings,
   createAdminHomeHeroSlide,
   createAdminCatalogCategory,
@@ -31,6 +33,7 @@ import {
   deleteAdminCatalogFilterOption,
   deleteAdminHomeProductSection,
   getHotdeals,
+  getAdminBoards,
   getAdminHomeHeroSlides,
   getAdminSiteDisplaySettings,
   getAdminCatalogCategories,
@@ -44,6 +47,7 @@ import {
   deleteAdminHomeHeroSlide,
   getAdminFilterMappings,
   getAdminHomeProductSections,
+  getBoardPosts,
   getMarketplaceItems,
   getProductPlaceholder,
   reorderAdminHomeHeroSlides,
@@ -130,7 +134,10 @@ type HomeSectionEditorItem = {
   client_id: string;
   id: number | null;
   title: string;
-  source_type: "recent_search" | "hotdeal" | "marketplace";
+  source_type: HomeProductSectionSource;
+  board: number | null;
+  board_name?: string | null;
+  board_slug?: string | null;
   category_keyword: string;
   item_limit: number;
   sort_order: number;
@@ -256,6 +263,9 @@ function toHomeSectionEditorItem(section: HomeProductSectionConfig): HomeSection
     id: section.id,
     title: section.title,
     source_type: section.source_type,
+    board: section.board ?? null,
+    board_name: section.board_name ?? null,
+    board_slug: section.board_slug ?? null,
     category_keyword: section.category_keyword,
     item_limit: section.item_limit || 30,
     sort_order: section.sort_order,
@@ -278,6 +288,7 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
   const [categoryMappings, setCategoryMappings] = useState<CatalogCategoryMapping[]>([]);
   const [filterMappings, setFilterMappings] = useState<CatalogFilterMapping[]>([]);
   const [homeSectionEditors, setHomeSectionEditors] = useState<HomeSectionEditorItem[]>([]);
+  const [productBoards, setProductBoards] = useState<AdminBoard[]>([]);
   const [siteSettings, setSiteSettings] = useState<SiteDisplaySettings | null>(null);
   const [draggingHomeSectionId, setDraggingHomeSectionId] = useState<string | null>(null);
   const [homeSectionDragOverId, setHomeSectionDragOverId] = useState<string | null>(null);
@@ -340,11 +351,13 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
   async function loadData() {
     try {
       if (mode === "ranking") {
-        const [homeSectionItems, displaySettings] = await Promise.all([
+        const [homeSectionItems, displaySettings, boardItems] = await Promise.all([
           getAdminHomeProductSections(),
           getAdminSiteDisplaySettings(),
+          getAdminBoards(),
         ]);
         setSiteSettings(displaySettings);
+        setProductBoards(boardItems.filter((board) => board.board_type === "product"));
         setHomeSectionEditors(
           reindexHomeSectionEditors(
             [...homeSectionItems]
@@ -370,6 +383,7 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
         homeSectionItems,
         homeHeroSlideItems,
         displaySettings,
+        boardItems,
       ] = await Promise.all([
         getAdminCatalogProviders(),
         getAdminCatalogCategories(),
@@ -383,6 +397,7 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
         getAdminHomeProductSections(),
         getAdminHomeHeroSlides(),
         getAdminSiteDisplaySettings(),
+        getAdminBoards(),
       ]);
 
       setProviders(providerItems);
@@ -394,6 +409,7 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
       setExternalAttributes(externalAttributeItems);
       setCategoryMappings(categoryMappingItems);
       setFilterMappings(filterMappingItems);
+      setProductBoards(boardItems.filter((board) => board.board_type === "product"));
       setHomeSectionEditors(
         reindexHomeSectionEditors(
           [...homeSectionItems]
@@ -750,6 +766,7 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
       id: null,
       title: "",
       source_type: "recent_search",
+      board: null,
       category_keyword: "",
       item_limit: 30,
       sort_order: homeSectionEditors.length,
@@ -854,18 +871,35 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
     popup.document.close();
 
     try {
-      const sourceItems =
-        item.source_type === "recent_search"
-          ? [...(await getHotdeals()), ...(await getMarketplaceItems())]
-          : item.source_type === "hotdeal"
-            ? await getHotdeals()
-            : await getMarketplaceItems();
+      const selectedBoard =
+        item.source_type === "product_board" ? productBoards.find((board) => board.id === item.board) : null;
+      let sourceItems: Array<Record<string, unknown>>;
+      let sourceLabel: string;
+      let placeholderSource: "hotdeal" | "marketplace" = "marketplace";
+
+      if (item.source_type === "product_board") {
+        if (!selectedBoard) {
+          throw new Error("연결할 상품게시판을 먼저 선택해 주세요.");
+        }
+        sourceItems = (await getBoardPosts(selectedBoard.slug)) as unknown as Array<Record<string, unknown>>;
+        sourceLabel = selectedBoard.name;
+      } else if (item.source_type === "recent_search") {
+        sourceItems = ([...(await getHotdeals()), ...(await getMarketplaceItems())] as unknown) as Array<Record<string, unknown>>;
+        sourceLabel = "최근검색상품";
+      } else if (item.source_type === "hotdeal") {
+        sourceItems = (await getHotdeals()) as unknown as Array<Record<string, unknown>>;
+        sourceLabel = "핫딜";
+        placeholderSource = "hotdeal";
+      } else {
+        sourceItems = (await getMarketplaceItems()) as unknown as Array<Record<string, unknown>>;
+        sourceLabel = "중고장터";
+      }
       const keyword = item.category_keyword.trim().toLowerCase();
       const filtered = sourceItems
         .filter((entry) => {
           if (!keyword) return true;
           const title = `${(entry as { title?: string }).title ?? ""}`.toLowerCase();
-          const category = `${(entry as { category_name?: string }).category_name ?? ""}`.toLowerCase();
+          const category = `${(entry as { category_name?: string; board_name?: string }).category_name ?? (entry as { board_name?: string }).board_name ?? selectedBoard?.name ?? ""}`.toLowerCase();
           return title.includes(keyword) || category.includes(keyword);
         })
         .slice(0, Math.max(1, item.item_limit || 30));
@@ -873,12 +907,13 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
       const cards = filtered
         .map((entry) => {
           const title = escapeHtml(`${(entry as { title?: string }).title ?? "제목 없음"}`);
-          const category = escapeHtml(`${(entry as { category_name?: string }).category_name ?? "-"}`);
-          const views = Number((entry as { view_count?: number }).view_count ?? 0).toLocaleString("ko-KR");
+          const category = escapeHtml(`${(entry as { category_name?: string; board_name?: string }).category_name ?? (entry as { board_name?: string }).board_name ?? selectedBoard?.name ?? "-"}`);
+          const views = Number((entry as { view_count?: number; views?: number }).view_count ?? (entry as { views?: number }).views ?? 0).toLocaleString("ko-KR");
           const image =
             (entry as { image?: string | null }).image ||
             (entry as { external_image_url?: string | null }).external_image_url ||
-            getProductPlaceholder(item.source_type === "hotdeal" ? "hotdeal" : "marketplace", (entry as { category_name?: string }).category_name);
+            (entry as { thumbnail_image?: string | null }).thumbnail_image ||
+            getProductPlaceholder(placeholderSource, (entry as { category_name?: string }).category_name || selectedBoard?.name);
           const imageUrl = escapeHtml(resolveMediaUrl(image || ""));
           return `<article style='border:1px solid #ddd;border-radius:8px;padding:12px;background:#fff'>
             <img src='${imageUrl}' alt='${title}' style='width:100%;height:160px;object-fit:cover;border-radius:6px;background:#f4f4f4'/>
@@ -905,9 +940,7 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
 <body>
   <div class="wrap">
     <h1>키워드 상품 보기</h1>
-    <p class="meta">키워드: ${escapeHtml(item.category_keyword || "전체")} · 소스: ${
-      item.source_type === "recent_search" ? "최근검색상품" : item.source_type === "hotdeal" ? "핫딜" : "중고장터"
-    } · 노출수: ${Math.max(1, item.item_limit || 30)}위</p>
+    <p class="meta">키워드: ${escapeHtml(item.category_keyword || "전체")} · 소스: ${escapeHtml(sourceLabel)} · 노출수: ${Math.max(1, item.item_limit || 30)}위</p>
     <section class="grid">${cards || "<p>조건에 맞는 상품이 없습니다.</p>"}</section>
   </div>
 </body>
@@ -929,11 +962,16 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
         if (!item.title.trim()) {
           throw new Error("모든 상품순위노출 항목에 제목을 입력해야 합니다.");
         }
+        if (item.source_type === "product_board" && !item.board) {
+          throw new Error(`'${item.title.trim()}' 상품탭에 연결할 상품게시판을 선택해야 합니다.`);
+        }
+        const linkedBoard = item.source_type === "product_board" ? item.board : null;
         if (item.id === null) {
           const created = await createAdminHomeProductSection({
             title: item.title.trim(),
             description: "",
             source_type: item.source_type,
+            board: linkedBoard,
             category_keyword: item.category_keyword.trim(),
             item_limit: Math.max(1, item.item_limit || 30),
             sort_order: item.sort_order,
@@ -944,6 +982,7 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
           const updated = await updateAdminHomeProductSection(item.id, {
             title: item.title.trim(),
             source_type: item.source_type,
+            board: linkedBoard,
             category_keyword: item.category_keyword.trim(),
             item_limit: Math.max(1, item.item_limit || 30),
             sort_order: item.sort_order,
@@ -1221,7 +1260,7 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-[var(--ink)]">홈 가로형 상품 탭</h2>
-            <p className="mt-2 text-sm text-slate-600">타이틀과 노출 개수를 정하고, 최근검색상품/핫딜/중고장터 소스로 여러 탭을 생성합니다.</p>
+            <p className="mt-2 text-sm text-slate-600">타이틀과 노출 개수를 정하고, 최근검색상품/핫딜/중고장터/상품게시판 소스로 여러 탭을 생성합니다.</p>
           </div>
           <button
             type="button"
@@ -1268,14 +1307,35 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
                     <select
                       className="rounded-[5px] border border-[var(--border)] bg-white px-3 py-2 text-sm font-normal"
                       value={item.source_type}
-                      onChange={(event) =>
-                        updateHomeSectionEditor(item.client_id, { source_type: event.target.value as "recent_search" | "hotdeal" | "marketplace" })
-                      }
+                      onChange={(event) => {
+                        const sourceType = event.target.value as HomeProductSectionSource;
+                        updateHomeSectionEditor(item.client_id, {
+                          source_type: sourceType,
+                          board: sourceType === "product_board" ? item.board ?? productBoards[0]?.id ?? null : null,
+                        });
+                      }}
                     >
                       <option value="recent_search">최근검색상품</option>
                       <option value="hotdeal">핫딜</option>
                       <option value="marketplace">중고장터</option>
+                      <option value="product_board">상품게시판</option>
                     </select>
+
+                    {item.source_type === "product_board" ? (
+                      <select
+                        className="rounded-[5px] border border-[var(--border)] bg-white px-3 py-2 text-sm font-normal"
+                        value={item.board ?? ""}
+                        onChange={(event) => updateHomeSectionEditor(item.client_id, { board: event.target.value ? Number(event.target.value) : null })}
+                      >
+                        <option value="">연결 상품게시판 선택</option>
+                        {productBoards.map((board) => (
+                          <option key={board.id} value={board.id}>
+                            {board.name}
+                            {board.product_board_type === "live_special" ? " · 라이브특가" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    ) : null}
 
                     <input
                       className="rounded-[5px] border border-[var(--border)] bg-white px-3 py-2 text-sm font-normal"
