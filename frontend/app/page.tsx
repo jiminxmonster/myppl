@@ -190,6 +190,7 @@ export default async function HomePage() {
             actionLabel: liveUrl ? item.product_live_button_label || "라이브 보기" : undefined,
             liveStatusLabel:
               section.board_product_board_type === "live_special" ? getProductLiveStatusLabel(item.product_live_status) : undefined,
+            liveStatus: section.board_product_board_type === "live_special" ? item.product_live_status : undefined,
             liveBenefit: section.board_product_board_type === "live_special" ? item.product_live_benefit : undefined,
             price: item.product_sale_price ? `₩${Number(item.product_sale_price).toLocaleString("ko-KR")}` : "가격 문의",
             originalPrice: item.product_original_price ? `₩${Number(item.product_original_price).toLocaleString("ko-KR")}` : undefined,

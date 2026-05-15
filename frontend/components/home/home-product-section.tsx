@@ -15,6 +15,7 @@ type HomeProductCard = {
   isExternal?: boolean;
   actionLabel?: string;
   liveStatusLabel?: string;
+  liveStatus?: string;
   liveBenefit?: string;
   price?: string;
   originalPrice?: string;
@@ -282,6 +283,7 @@ export function HomeProductSection({
           onDragStart={(event) => event.preventDefault()}
         >
           {paddedItems.map((item, index) => {
+            const isOnAir = item.liveStatus === "on_air" || item.liveStatusLabel === "진행중";
             const cardClassName =
               "block w-[220px] shrink-0 select-none overflow-hidden rounded-[0.67rem] border border-[var(--border)] bg-white shadow-soft transition hover:-translate-y-1 sm:w-[250px] lg:w-[270px]";
 
@@ -304,8 +306,18 @@ export function HomeProductSection({
                 </div>
                 <div className="space-y-2 p-4 sm:p-5">
                   {item.liveStatusLabel ? (
-                    <p className="inline-flex rounded-[4px] bg-[var(--accent)] px-2 py-1 text-[10px] font-bold text-white">
-                      {item.liveStatusLabel}
+                    <p
+                      className={`inline-flex items-center gap-1.5 rounded-[4px] px-2 py-1 text-[10px] font-black text-white ${
+                        isOnAir ? "home-live-onair-badge bg-red-600" : "bg-[var(--accent)]"
+                      }`}
+                    >
+                      {isOnAir ? (
+                        <>
+                          <span className="home-live-onair-dot h-1.5 w-1.5 rounded-full bg-white" />
+                          <span className="tracking-[0.08em]">ON AIR</span>
+                        </>
+                      ) : null}
+                      <span>{item.liveStatusLabel}</span>
                     </p>
                   ) : null}
                   <p className="line-clamp-2 min-h-[3rem] text-sm font-semibold text-[var(--ink)] sm:text-base">{item.title}</p>
@@ -375,6 +387,35 @@ export function HomeProductSection({
 
           .home-product-scroller::-webkit-scrollbar {
             display: none;
+          }
+
+          .home-live-onair-badge {
+            animation: home-live-onair-glow 1.1s ease-in-out infinite;
+          }
+
+          .home-live-onair-dot {
+            animation: home-live-onair-blink 0.75s steps(2, start) infinite;
+          }
+
+          @keyframes home-live-onair-glow {
+            0%,
+            100% {
+              box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+            }
+            50% {
+              box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.14);
+            }
+          }
+
+          @keyframes home-live-onair-blink {
+            0%,
+            49% {
+              opacity: 1;
+            }
+            50%,
+            100% {
+              opacity: 0.25;
+            }
           }
         `}</style>
       </div>
