@@ -233,7 +233,7 @@ export function TopCategoryIconMenu({
         type="button"
         aria-label="이전 카테고리"
         onClick={() => scrollRail("left")}
-        className="absolute left-0 top-8 z-10 hidden h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] bg-white text-slate-600 shadow-soft transition hover:text-[var(--brand)] md:flex"
+        className="absolute left-0 top-10 z-10 hidden h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] bg-white text-slate-600 shadow-soft transition hover:text-[var(--brand)] md:flex"
       >
         <ChevronLeft className="h-5 w-5" />
       </button>
@@ -241,9 +241,9 @@ export function TopCategoryIconMenu({
         ref={railRef}
         className="flex gap-5 overflow-x-auto px-1 pb-4 pt-1 [scrollbar-width:none] md:px-12 [&::-webkit-scrollbar]:hidden"
       >
-        <Link href={basePath} className="group flex w-[92px] shrink-0 flex-col items-center gap-2 text-center">
+        <Link href={basePath} className="group flex w-[128px] shrink-0 flex-col items-center gap-2 text-center">
           <span
-            className={`flex h-[78px] w-[78px] items-center justify-center overflow-hidden rounded-[8px] border-2 bg-white transition ${
+            className={`flex h-[118px] w-[118px] items-center justify-center overflow-hidden rounded-[8px] border-2 bg-white transition ${
               isBaseRoute && !selectedCategory
                 ? "border-[var(--brand)]"
                 : "border-transparent group-hover:border-[var(--brand)]"
@@ -271,10 +271,10 @@ export function TopCategoryIconMenu({
             <Link
               key={`${category.slug}-${category.id}`}
               href={`${basePath}?category=${encodeURIComponent(category.slug)}`}
-              className="group flex w-[92px] shrink-0 flex-col items-center gap-2 text-center"
+              className="group flex w-[128px] shrink-0 flex-col items-center gap-2 text-center"
             >
               <span
-                className={`relative flex h-[78px] w-[78px] items-center justify-center overflow-hidden rounded-[8px] border-2 bg-white transition ${
+                className={`relative flex h-[118px] w-[118px] items-center justify-center overflow-hidden rounded-[8px] border-2 bg-white transition ${
                   isActive ? "border-[var(--brand)]" : "border-transparent group-hover:border-[var(--brand)]"
                 }`}
               >
@@ -300,7 +300,7 @@ export function TopCategoryIconMenu({
         type="button"
         aria-label="다음 카테고리"
         onClick={() => scrollRail("right")}
-        className="absolute right-0 top-8 z-10 hidden h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] bg-white text-slate-600 shadow-soft transition hover:text-[var(--brand)] md:flex"
+        className="absolute right-0 top-10 z-10 hidden h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] bg-white text-slate-600 shadow-soft transition hover:text-[var(--brand)] md:flex"
       >
         <ChevronRight className="h-5 w-5" />
       </button>
