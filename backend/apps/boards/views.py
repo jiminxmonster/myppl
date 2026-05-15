@@ -2,8 +2,9 @@ from django.db.models import BooleanField, Case, Count, F, Q, Value, When
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.shortcuts import get_object_or_404
-from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework import generics, permissions, response, status
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import IsAdminOnly, IsAdminOrModerator
@@ -105,6 +106,9 @@ class PostListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         """현재 로그인 사용자를 작성자로 저장한다."""
         board = get_object_or_404(Board.objects.filter(is_visible=True), slug=self.kwargs["slug"])
+        if not board.can_user_write(self.request.user):
+            raise PermissionDenied("이 게시판에 글을 작성할 권한이 없습니다.")
+
         validated = serializer.validated_data
         validated["title"] = apply_keyword_filter(validated["title"], target=KeywordFilter.TARGET_POST)
         validated["content"] = apply_keyword_filter(validated["content"], target=KeywordFilter.TARGET_POST)

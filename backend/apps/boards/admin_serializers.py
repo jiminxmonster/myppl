@@ -11,6 +11,24 @@ class AdminBoardSerializer(serializers.ModelSerializer):
     def get_post_count(self, obj):
         return getattr(obj, "post_count", 0)
 
+    def validate_allowed_writer_roles(self, value):
+        allowed_values = {role for role, _label in Board.WRITER_ROLE_CHOICES}
+        if not isinstance(value, list):
+            raise serializers.ValidationError("글쓰기 허용 대상 형식이 올바르지 않습니다.")
+
+        normalized = []
+        for role in value:
+            if role not in allowed_values:
+                raise serializers.ValidationError("지원하지 않는 글쓰기 허용 대상입니다.")
+            if role not in normalized:
+                normalized.append(role)
+
+        if not normalized:
+            raise serializers.ValidationError("글쓰기 허용 대상을 하나 이상 선택하세요.")
+        if Board.WRITER_ALL in normalized:
+            return [Board.WRITER_ALL]
+        return normalized
+
     class Meta:
         model = Board
         fields = (
@@ -28,6 +46,7 @@ class AdminBoardSerializer(serializers.ModelSerializer):
             "show_in_top_menu",
             "min_grade",
             "write_grade",
+            "allowed_writer_roles",
             "comment_grade",
             "read_permission",
             "allow_anonymous",

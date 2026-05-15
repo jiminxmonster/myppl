@@ -5,14 +5,8 @@ import { useRouter } from "next/navigation";
 import { GripVertical, Check, RotateCcw } from "lucide-react";
 import axios from "axios";
 
-import {
-  AdminBoard,
-  createAdminBoard,
-  deleteAdminBoard,
-  getAdminBoards,
-  reorderAdminBoards,
-  updateAdminBoard,
-} from "@/lib/api";
+import type { AdminBoard, BoardWriterRole } from "@/lib/api";
+import { createAdminBoard, deleteAdminBoard, getAdminBoards, reorderAdminBoards, updateAdminBoard } from "@/lib/api";
 
 function ToggleSwitch({
   checked,
@@ -44,6 +38,76 @@ function ToggleSwitch({
 }
 
 
+const writerRoleOptions: { value: BoardWriterRole; label: string }[] = [
+  { value: "all", label: "모두" },
+  { value: "seller", label: "판매자" },
+  { value: "buyer", label: "구매자" },
+  { value: "admin", label: "관리자" },
+];
+
+const writerRoleLabelMap = writerRoleOptions.reduce<Record<BoardWriterRole, string>>((acc, option) => {
+  acc[option.value] = option.label;
+  return acc;
+}, {} as Record<BoardWriterRole, string>);
+
+function normalizeWriterRoles(roles?: BoardWriterRole[] | null): BoardWriterRole[] {
+  if (!roles || roles.length === 0 || roles.includes("all")) {
+    return ["all"];
+  }
+  return writerRoleOptions
+    .map((option) => option.value)
+    .filter((role) => role !== "all" && roles.includes(role));
+}
+
+function toggleWriterRole(roles: BoardWriterRole[] | undefined, role: BoardWriterRole): BoardWriterRole[] {
+  const current = normalizeWriterRoles(roles);
+  if (role === "all") {
+    return ["all"];
+  }
+
+  const withoutAll = current.filter((item) => item !== "all");
+  const next = withoutAll.includes(role) ? withoutAll.filter((item) => item !== role) : [...withoutAll, role];
+  return next.length > 0 ? next : ["all"];
+}
+
+function WriterRoleCheckboxes({
+  value,
+  onChange,
+}: {
+  value?: BoardWriterRole[] | null;
+  onChange: (next: BoardWriterRole[]) => void;
+}) {
+  const selected = normalizeWriterRoles(value);
+  return (
+    <div className="rounded-[5px] border border-[var(--border)] p-4 md:col-span-2">
+      <p className="text-sm font-semibold text-slate-800">글쓰기 허용 대상</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {writerRoleOptions.map((option) => {
+          const checked = selected.includes(option.value);
+          return (
+            <label
+              key={option.value}
+              className={`inline-flex cursor-pointer items-center gap-2 rounded-[5px] border px-3 py-2 text-sm font-semibold transition ${
+                checked
+                  ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]"
+                  : "border-[var(--border)] text-slate-600 hover:border-slate-300"
+              }`}
+            >
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-[var(--brand)]"
+                checked={checked}
+                onChange={() => onChange(toggleWriterRole(selected, option.value))}
+              />
+              {option.label}
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const initialForm: Omit<AdminBoard, "id" | "slug" | "post_count"> = {
   name: "",
   board_type: "general",
@@ -57,6 +121,7 @@ const initialForm: Omit<AdminBoard, "id" | "slug" | "post_count"> = {
   show_in_top_menu: false,
   min_grade: "seed",
   write_grade: "member",
+  allowed_writer_roles: ["all"],
   comment_grade: "member",
   read_permission: "public",
   allow_anonymous: true,
@@ -157,13 +222,6 @@ export default function AdminBoardsPage() {
   };
 
   const handleDelete = async (board: AdminBoard) => {
-    const isProtectedBoard = ["free", "notice", "hotdeal-board", "market-board"].includes(board.slug);
-    if (isProtectedBoard) {
-      setError("기본 게시판은 삭제할 수 없습니다. 숨김 처리 또는 수정으로 관리하세요.");
-      setNotice("");
-      return;
-    }
-
     const confirmed = window.confirm(`'${board.name}' 게시판을 삭제하시겠습니까?`);
     if (!confirmed) {
       return;
@@ -218,6 +276,7 @@ export default function AdminBoardsPage() {
       show_in_top_menu: (board as AdminBoard & { show_in_top_menu?: boolean }).show_in_top_menu ?? false,
       min_grade: board.min_grade,
       write_grade: board.write_grade,
+      allowed_writer_roles: normalizeWriterRoles(board.allowed_writer_roles),
       comment_grade: board.comment_grade,
       read_permission: board.read_permission,
       allow_anonymous: board.allow_anonymous,
@@ -255,6 +314,8 @@ export default function AdminBoardsPage() {
           >
             <option value="general">일반 게시판</option>
             <option value="product">그리드형 상품게시판</option>
+            <option value="hotdeal">핫딜 게시판</option>
+            <option value="marketplace">중고장터 게시판</option>
             <option value="notice">공지</option>
           </select>
           {form.board_type === "product" ? (
@@ -292,6 +353,10 @@ export default function AdminBoardsPage() {
             <option value="buyer">구매자</option>
             <option value="seller">판매자</option>
           </select>
+          <WriterRoleCheckboxes
+            value={form.allowed_writer_roles}
+            onChange={(next) => setForm((current) => ({ ...current, allowed_writer_roles: next }))}
+          />
           <textarea className="rounded-[0.5rem] border border-[var(--border)] px-4 py-3 md:col-span-2" rows={3} placeholder="게시판 설명" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
           <label className="flex items-center justify-between gap-3 rounded-[5px] border border-[var(--border)] px-4 py-3 text-sm md:col-span-2">
             <span>탑 메뉴에 노출</span>
@@ -332,7 +397,6 @@ export default function AdminBoardsPage() {
           </div>
           <div className="grid gap-3">
             {localBoards
-              .filter((board) => !["hotdeal", "marketplace"].includes(board.board_type))
               .map((board, index) => (
                 <article
                   key={board.id}
@@ -375,6 +439,9 @@ export default function AdminBoardsPage() {
                         >
                           {board.show_in_top_menu ? "In Menu" : "Not In Menu"}
                         </span>
+                        <span className="rounded-[3px] bg-amber-100 px-2 py-0.5 text-amber-700">
+                          글쓰기 {normalizeWriterRoles(board.allowed_writer_roles).map((role) => writerRoleLabelMap[role]).join(", ")}
+                        </span>
                       </div>
                       {editingBoardId === board.id ? (
                         <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -386,6 +453,8 @@ export default function AdminBoardsPage() {
                           >
                             <option value="general">일반 게시판</option>
                             <option value="product">그리드형 상품게시판</option>
+                            <option value="hotdeal">핫딜 게시판</option>
+                            <option value="marketplace">중고장터 게시판</option>
                             <option value="notice">공지</option>
                           </select>
                           {((editingForm.board_type as string | undefined) ?? board.board_type) === "product" ? (
@@ -426,6 +495,10 @@ export default function AdminBoardsPage() {
                             <option value="buyer">구매자</option>
                             <option value="seller">판매자</option>
                           </select>
+                          <WriterRoleCheckboxes
+                            value={(editingForm.allowed_writer_roles as BoardWriterRole[] | undefined) ?? board.allowed_writer_roles}
+                            onChange={(next) => setEditingForm((current) => ({ ...current, allowed_writer_roles: next }))}
+                          />
                           <input className="rounded-2xl border border-[var(--border)] px-4 py-3 md:col-span-2" value={editingForm.description ?? ""} onChange={(event) => setEditingForm((current) => ({ ...current, description: event.target.value }))} />
                           <label className="flex items-center justify-between gap-3 rounded-[5px] border border-[var(--border)] px-4 py-3 text-sm md:col-span-2">
                             <span>탑 메뉴에 노출</span>
@@ -457,9 +530,7 @@ export default function AdminBoardsPage() {
                     <button
                       type="button"
                       onClick={() => void handleDelete(board)}
-                      disabled={["free", "notice", "hotdeal-board", "market-board"].includes(board.slug)}
-                      className="rounded-[5px] border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                      title={["free", "notice", "hotdeal-board", "market-board"].includes(board.slug) ? "기본 게시판은 삭제할 수 없습니다." : undefined}
+                      className="rounded-[5px] border border-red-200 px-4 py-2 text-sm font-semibold text-red-600"
                     >
                       삭제
                     </button>

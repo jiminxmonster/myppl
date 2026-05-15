@@ -3,6 +3,10 @@ from django.db import models
 from mptt.models import MPTTModel, TreeForeignKey
 
 
+def default_board_writer_roles():
+    return ["all"]
+
+
 class Board(models.Model):
     """게시판 메타 정보."""
 
@@ -40,6 +44,16 @@ class Board(models.Model):
         (AUDIENCE_BUYER, "구매자"),
         (AUDIENCE_SELLER, "판매자"),
     ]
+    WRITER_ALL = "all"
+    WRITER_BUYER = "buyer"
+    WRITER_SELLER = "seller"
+    WRITER_ADMIN = "admin"
+    WRITER_ROLE_CHOICES = [
+        (WRITER_ALL, "모두"),
+        (WRITER_BUYER, "구매자"),
+        (WRITER_SELLER, "판매자"),
+        (WRITER_ADMIN, "관리자"),
+    ]
 
     name = models.CharField("게시판 이름", max_length=100)
     slug = models.SlugField("게시판 슬러그", unique=True)
@@ -59,6 +73,7 @@ class Board(models.Model):
     show_in_top_menu = models.BooleanField("탑 메뉴 노출 여부", default=False)
     min_grade = models.CharField("읽기 최소 등급", max_length=20, default="seed")
     write_grade = models.CharField("쓰기 최소 등급", max_length=20, default="member")
+    allowed_writer_roles = models.JSONField("글쓰기 허용 대상", default=default_board_writer_roles, blank=True)
     comment_grade = models.CharField("댓글 최소 등급", max_length=20, default="member")
     read_permission = models.CharField("읽기 권한", max_length=20, choices=READ_PERMISSION_CHOICES, default=READ_PUBLIC)
     allow_anonymous = models.BooleanField("비회원 읽기 허용", default=True)
@@ -75,6 +90,36 @@ class Board(models.Model):
     @property
     def has_children(self) -> bool:
         return self.children.exists()
+
+    def normalized_allowed_writer_roles(self) -> list[str]:
+        allowed_values = {value for value, _label in self.WRITER_ROLE_CHOICES}
+        roles = self.allowed_writer_roles if isinstance(self.allowed_writer_roles, list) else []
+        normalized = []
+        for role in roles:
+            if role in allowed_values and role not in normalized:
+                normalized.append(role)
+        if not normalized or self.WRITER_ALL in normalized:
+            return [self.WRITER_ALL]
+        return normalized
+
+    def can_user_write(self, user) -> bool:
+        if not user or not user.is_authenticated:
+            return False
+
+        roles = self.normalized_allowed_writer_roles()
+        if self.WRITER_ALL in roles:
+            return True
+
+        operator_role = getattr(user, "operator_role", "")
+        if self.WRITER_ADMIN in roles and operator_role in {"moderator", "admin", "superadmin"}:
+            return True
+
+        member_type = getattr(user, "member_type", "")
+        if self.WRITER_BUYER in roles and member_type == self.WRITER_BUYER:
+            return True
+        if self.WRITER_SELLER in roles and member_type == self.WRITER_SELLER:
+            return True
+        return False
 
 
 class Post(models.Model):

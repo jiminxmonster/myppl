@@ -22,6 +22,7 @@ class BoardSerializer(serializers.ModelSerializer):
             "board_type",
             "product_board_type",
             "audience",
+            "allowed_writer_roles",
             "description",
             "show_in_top_menu",
             "child_count",

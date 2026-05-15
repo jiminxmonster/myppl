@@ -84,6 +84,8 @@ export type PostSummary = {
   created_at: string;
 };
 
+export type BoardWriterRole = "all" | "buyer" | "seller" | "admin";
+
 export type BoardItem = {
   id: number;
   name: string;
@@ -92,6 +94,7 @@ export type BoardItem = {
   board_type: string;
   product_board_type?: "standard" | "live_special";
   audience: "all" | "buyer" | "seller";
+  allowed_writer_roles: BoardWriterRole[];
   description: string;
   show_in_top_menu: boolean;
   child_count: number;
@@ -359,6 +362,7 @@ export type AdminBoard = {
   show_in_top_menu?: boolean;
   min_grade: string;
   write_grade: string;
+  allowed_writer_roles: BoardWriterRole[];
   comment_grade: string;
   read_permission: string;
   allow_anonymous: boolean;
