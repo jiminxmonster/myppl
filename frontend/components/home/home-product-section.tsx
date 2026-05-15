@@ -82,10 +82,10 @@ function RankTopBar({ rank }: { rank: number }) {
   const iconClassName = getRankIconClassName(rank);
 
   return (
-    <div className={`flex h-8 items-center px-3 text-xs font-black ${barClassName}`}>
-      <span className="inline-flex items-center gap-1">
-        {isPodium ? <Crown className={`h-4 w-4 ${iconClassName}`} fill="currentColor" /> : null}
-        <span className="text-[1.3em] leading-none">{rank}</span>
+    <div className={`flex h-10 items-center px-4 text-sm font-black ${barClassName}`}>
+      <span className="inline-flex items-center gap-1.5">
+        {isPodium ? <Crown className={`h-5 w-5 ${iconClassName}`} fill="currentColor" /> : null}
+        <span className="text-[1.6em] leading-none">{rank}</span>
       </span>
     </div>
   );
@@ -291,7 +291,7 @@ export function HomeProductSection({
               <>
                 {item.rank ? <RankTopBar rank={item.rank} /> : null}
                 <div
-                  className="flex aspect-[5/4] items-center justify-center p-4 sm:p-5 lg:p-6"
+                  className="flex aspect-[5/4] items-center justify-center overflow-hidden"
                   style={{
                     background: item.isPlaceholder ? item.placeholderTone : "color-mix(in srgb, var(--muted) 30%, white)",
                   }}
@@ -301,7 +301,7 @@ export function HomeProductSection({
                       임시 상품 슬롯
                     </div>
                   ) : (
-                    <SafeImage src={item.image} alt={item.title} className="h-full w-full object-contain" seed={item.title} />
+                    <SafeImage src={item.image} alt={item.title} className="h-full w-full object-cover" seed={item.title} />
                   )}
                 </div>
                 <div className="space-y-2 p-4 sm:p-5">
