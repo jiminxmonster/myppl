@@ -324,7 +324,7 @@ export function HomeProductSection({
                   ) : null}
                   <p className="line-clamp-2 min-h-[3rem] text-sm font-semibold text-[var(--ink)] sm:text-base">{item.title}</p>
                   <p className="text-xs text-slate-500 sm:text-sm">{item.subtitle}</p>
-                  {item.originalPrice ? <p className="text-[0.9625rem] leading-5 text-slate-400 line-through">{item.originalPrice}</p> : null}
+                  {item.originalPrice ? <p className="mt-3 text-[1.06rem] leading-5 text-red-600 line-through">{item.originalPrice}</p> : null}
                   {item.price ? <p className="text-[1.1rem] font-bold text-[var(--brand)] sm:text-[1.2375rem]">{item.price}</p> : null}
                   {item.liveBenefit ? <p className="line-clamp-1 text-xs font-semibold text-[var(--brand)]">{item.liveBenefit}</p> : null}
                   {item.actionLabel && item.actionHref ? (
