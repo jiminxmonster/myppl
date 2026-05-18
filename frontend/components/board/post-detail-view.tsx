@@ -28,6 +28,13 @@ export function PostDetailView({ slug, postId, initialPost }: PostDetailViewProp
   const liveStartLabel = formatKoreanDateTime(post.product_live_starts_at);
   const liveEndLabel = formatKoreanDateTime(post.product_live_ends_at);
   const liveButtonLabel = post.product_live_button_label || "라이브 보기";
+  const liveActionUrl =
+    isLiveSpecialPost &&
+    post.product_live_url &&
+    post.product_live_status !== "ended" &&
+    post.product_live_status !== "replay"
+      ? post.product_live_url
+      : "";
 
   useEffect(() => {
     let cancelled = false;
@@ -112,8 +119,8 @@ export function PostDetailView({ slug, postId, initialPost }: PostDetailViewProp
                   ) : null}
                 </div>
               ) : null}
-              {isLiveSpecialPost && post.product_live_url ? (
-                <ProductLiveActions title={post.title} liveUrl={post.product_live_url} buttonLabel={liveButtonLabel} />
+              {liveActionUrl ? (
+                <ProductLiveActions title={post.title} liveUrl={liveActionUrl} buttonLabel={liveButtonLabel} />
               ) : null}
             </aside>
           </div>

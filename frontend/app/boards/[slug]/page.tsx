@@ -46,6 +46,13 @@ export default async function BoardPage({ params }: BoardPageProps) {
               const originalPrice = post.product_original_price ? Number(post.product_original_price).toLocaleString("ko-KR") : null;
               const liveStartLabel = formatKoreanDateTime(post.product_live_starts_at);
               const liveStatusLabel = getProductLiveStatusLabel(post.product_live_status);
+              const liveActionUrl =
+                isLiveSpecialBoard &&
+                post.product_live_url &&
+                post.product_live_status !== "ended" &&
+                post.product_live_status !== "replay"
+                  ? post.product_live_url
+                  : "";
               return (
                 <article
                   key={post.id}
@@ -79,10 +86,10 @@ export default async function BoardPage({ params }: BoardPageProps) {
                       <p className="truncate text-[10px] text-slate-500 sm:text-xs">조회 {post.views} · 댓글 {post.comment_count}</p>
                     </div>
                   </Link>
-                  {isLiveSpecialBoard && post.product_live_url ? (
+                  {liveActionUrl ? (
                     <div className="px-2 pb-2 sm:px-3 sm:pb-3">
                       <a
-                        href={post.product_live_url}
+                        href={liveActionUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex rounded-[4px] bg-[var(--accent)] px-2 py-1 text-[10px] font-bold text-white sm:text-xs"

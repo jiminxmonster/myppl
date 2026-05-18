@@ -173,7 +173,12 @@ export default async function HomePage() {
         .map((item) => {
           const category = section.board_name || item.board_name || "상품게시판";
           const liveUrl =
-            section.board_product_board_type === "live_special" && item.product_live_url ? item.product_live_url : "";
+            section.board_product_board_type === "live_special" &&
+            item.product_live_url &&
+            item.product_live_status !== "ended" &&
+            item.product_live_status !== "replay"
+              ? item.product_live_url
+              : "";
           return {
             id: item.id,
             key: `board-${section.board_slug}-${item.id}`,
