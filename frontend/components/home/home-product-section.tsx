@@ -14,6 +14,8 @@ type HomeProductCard = {
   href: string;
   isExternal?: boolean;
   actionLabel?: string;
+  actionHref?: string;
+  actionExternal?: boolean;
   liveStatusLabel?: string;
   liveStatus?: string;
   liveBenefit?: string;
@@ -325,16 +327,35 @@ export function HomeProductSection({
                   {item.originalPrice ? <p className="text-[0.9625rem] leading-5 text-slate-400 line-through">{item.originalPrice}</p> : null}
                   {item.price ? <p className="text-[1.1rem] font-bold text-[var(--brand)] sm:text-[1.2375rem]">{item.price}</p> : null}
                   {item.liveBenefit ? <p className="line-clamp-1 text-xs font-semibold text-[var(--brand)]">{item.liveBenefit}</p> : null}
-                  {item.actionLabel ? (
-                    <p className="inline-flex rounded-[5px] bg-[var(--accent)] px-3 py-1 text-xs font-bold text-white">
+                  {item.actionLabel && item.actionHref ? (
+                    <a
+                      href={item.actionHref}
+                      target={item.actionExternal ? "_blank" : undefined}
+                      rel={item.actionExternal ? "noopener noreferrer" : undefined}
+                      className="inline-flex rounded-[5px] bg-[var(--accent)] px-3 py-1 text-xs font-bold text-white"
+                    >
                       {item.actionLabel}
-                    </p>
+                    </a>
+                  ) : item.actionLabel ? (
+                    <p className="inline-flex rounded-[5px] bg-[var(--accent)] px-3 py-1 text-xs font-bold text-white">{item.actionLabel}</p>
                   ) : null}
                 </div>
               </>
             );
 
             if (item.isPlaceholder) {
+              return (
+                <div
+                  key={`${item.id}-${index}`}
+                  data-home-product-card
+                  className={cardClassName}
+                >
+                  {cardContent}
+                </div>
+              );
+            }
+
+            if (item.actionHref) {
               return (
                 <div
                   key={`${item.id}-${index}`}
