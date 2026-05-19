@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useMemo, useRef, type MouseEvent, type PointerEvent } from "react";
-import { Crown } from "lucide-react";
 
 import { SafeImage } from "@/components/common/safe-image";
 
@@ -60,17 +59,17 @@ function getRankBarClassName(rank: number) {
   return "";
 }
 
-function getRankIconClassName(rank: number) {
+function getRankCrownSrc(rank: number) {
   if (rank === 1) {
-    return "text-[#8a5a00]";
+    return "/artwork/rank-gold.svg";
   }
   if (rank === 2) {
-    return "text-[#64748b]";
+    return "/artwork/rank-silver.svg";
   }
   if (rank === 3) {
-    return "text-[#7c3f18]";
+    return "/artwork/rank-bronze.svg";
   }
-  return "";
+  return null;
 }
 
 function RankTopBar({ rank }: { rank: number }) {
@@ -80,13 +79,18 @@ function RankTopBar({ rank }: { rank: number }) {
     return null;
   }
 
-  const isPodium = rank <= 3;
-  const iconClassName = getRankIconClassName(rank);
+  const crownSrc = getRankCrownSrc(rank);
 
   return (
-    <div className={`flex h-10 items-center px-4 text-sm font-black ${barClassName}`}>
-      <span className="inline-flex items-center gap-1.5">
-        {isPodium ? <Crown className={`h-5 w-5 ${iconClassName}`} fill="currentColor" /> : null}
+    <div className={`flex h-12 items-center px-5 text-sm font-black ${barClassName}`}>
+      <span className="inline-flex items-center gap-2">
+        {crownSrc ? (
+          <span
+            aria-hidden="true"
+            className="h-8 w-10 bg-contain bg-center bg-no-repeat drop-shadow-sm"
+            style={{ backgroundImage: `url(${crownSrc})` }}
+          />
+        ) : null}
         <span className="text-[1.6em] leading-none">{rank}</span>
       </span>
     </div>
