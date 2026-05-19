@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, type MouseEvent, type PointerEvent } from "react";
+import { useMemo, useRef, type CSSProperties, type MouseEvent, type PointerEvent } from "react";
 
 import { SafeImage } from "@/components/common/safe-image";
 
@@ -59,6 +59,25 @@ function getRankBarClassName(rank: number) {
   return "";
 }
 
+function getRankBarStyle(rank: number): CSSProperties | undefined {
+  if (rank === 1) {
+    return {
+      background: "linear-gradient(90deg, rgba(255,255,255,0.86) 0%, #fff4b4 24%, #f7d35f 58%, #f7d35f 100%)",
+    };
+  }
+  if (rank === 2) {
+    return {
+      background: "linear-gradient(90deg, rgba(255,255,255,0.9) 0%, #edf2fb 24%, #d8dde6 58%, #d8dde6 100%)",
+    };
+  }
+  if (rank === 3) {
+    return {
+      background: "linear-gradient(90deg, rgba(255,255,255,0.82) 0%, #f4c79e 24%, #c9854f 58%, #c9854f 100%)",
+    };
+  }
+  return undefined;
+}
+
 function getRankCrownSrc(rank: number) {
   if (rank === 1) {
     return "/artwork/rank-gold.svg";
@@ -80,9 +99,10 @@ function RankTopBar({ rank }: { rank: number }) {
   }
 
   const crownSrc = getRankCrownSrc(rank);
+  const barStyle = getRankBarStyle(rank);
 
   return (
-    <div className={`flex h-12 items-center px-5 text-sm font-black ${barClassName}`}>
+    <div className={`flex h-12 items-center px-5 text-sm font-black ${barClassName}`} style={barStyle}>
       <span className="inline-flex items-center gap-2">
         {crownSrc ? (
           <span
