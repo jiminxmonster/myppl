@@ -145,6 +145,7 @@ export default async function HomePage() {
           key: `hotdeal-${item.id}`,
           title: item.title,
           category: item.category_name || "핫딜",
+          marketName: item.category_name || "핫딜",
           subtitle: `${item.category_name || "핫딜"} · 조회 ${item.view_count}`,
           image: resolveMediaUrl(item.image || getProductPlaceholder("hotdeal", item.category_name)),
           href: `/hotdeals/${item.id}`,
@@ -162,6 +163,7 @@ export default async function HomePage() {
           key: `marketplace-${item.id}`,
           title: item.title,
           category: item.category_name || "상품",
+          marketName: item.product_category_name || item.category_name || "상품",
           subtitle: `${item.category_name || "상품"} · 조회 ${item.view_count}`,
           image: resolveMediaUrl(item.image || item.external_image_url || getProductPlaceholder("marketplace", item.category_name)),
           href: `/marketplace/${item.id}`,
@@ -185,6 +187,10 @@ export default async function HomePage() {
             key: `board-${section.board_slug}-${item.id}`,
             title: item.title,
             category,
+            marketName:
+              section.board_product_board_type === "live_special"
+                ? item.product_live_platform || category
+                : category,
             subtitle:
               section.board_product_board_type === "live_special"
                 ? [item.product_live_platform, formatKoreanDateTime(item.product_live_starts_at)].filter(Boolean).join(" · ") ||

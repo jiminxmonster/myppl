@@ -20,6 +20,7 @@ type HomeProductCard = {
   liveBenefit?: string;
   price?: string;
   originalPrice?: string;
+  marketName?: string;
 };
 
 type DisplayCard = HomeProductCard & {
@@ -91,7 +92,11 @@ function getRankCrownSrc(rank: number) {
   return null;
 }
 
-function RankTopBar({ rank }: { rank: number }) {
+function getFallbackMarketName(subtitle: string) {
+  return subtitle.split("·")[0]?.trim() || "";
+}
+
+function RankTopBar({ rank, marketName }: { rank: number; marketName?: string }) {
   const barClassName = getRankBarClassName(rank);
 
   if (!barClassName) {
@@ -100,9 +105,10 @@ function RankTopBar({ rank }: { rank: number }) {
 
   const crownSrc = getRankCrownSrc(rank);
   const barStyle = getRankBarStyle(rank);
+  const resolvedMarketName = rank <= 3 ? marketName?.trim() : "";
 
   return (
-    <div className={`flex h-12 items-center px-5 text-sm font-black ${barClassName}`} style={barStyle}>
+    <div className={`flex h-12 items-center justify-between gap-3 px-5 text-sm font-black ${barClassName}`} style={barStyle}>
       <span className="inline-flex items-center gap-2">
         {crownSrc ? (
           <span
@@ -113,6 +119,11 @@ function RankTopBar({ rank }: { rank: number }) {
         ) : null}
         <span className="text-[1.6em] leading-none">{rank}</span>
       </span>
+      {resolvedMarketName ? (
+        <span className="max-w-[8rem] truncate rounded-full bg-white/65 px-2.5 py-1 text-[0.7rem] font-black leading-none text-slate-800 shadow-sm backdrop-blur">
+          {resolvedMarketName}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -315,7 +326,7 @@ export function HomeProductSection({
 
             const cardContent = (
               <>
-                {item.rank ? <RankTopBar rank={item.rank} /> : null}
+                {item.rank ? <RankTopBar rank={item.rank} marketName={item.marketName || getFallbackMarketName(item.subtitle)} /> : null}
                 <div
                   className="flex aspect-[5/4] items-center justify-center overflow-hidden"
                   style={{
