@@ -20,6 +20,7 @@ export default function WritePage({ params }: WritePageProps) {
   const [productOriginalPrice, setProductOriginalPrice] = useState("");
   const [productSalePrice, setProductSalePrice] = useState("");
   const [productLiveUrl, setProductLiveUrl] = useState("");
+  const [productStoreName, setProductStoreName] = useState("");
   const [productLivePlatform, setProductLivePlatform] = useState("");
   const [productLiveChannel, setProductLiveChannel] = useState("");
   const [productLiveStartsAt, setProductLiveStartsAt] = useState("");
@@ -61,6 +62,7 @@ export default function WritePage({ params }: WritePageProps) {
         product_original_price: isProductBoard ? productOriginalPrice : "",
         product_sale_price: isProductBoard ? productSalePrice : "",
         product_live_url: isLiveSpecialBoard ? productLiveUrl.trim() : "",
+        product_store_name: isLiveSpecialBoard ? productStoreName.trim() : "",
         product_live_platform: isLiveSpecialBoard ? productLivePlatform.trim() : "",
         product_live_channel: isLiveSpecialBoard ? productLiveChannel.trim() : "",
         product_live_starts_at: isLiveSpecialBoard ? productLiveStartsAt : "",
@@ -123,6 +125,7 @@ export default function WritePage({ params }: WritePageProps) {
             {isLiveSpecialBoard ? (
               <LiveBroadcastFields
                 liveUrl={productLiveUrl}
+                storeName={productStoreName}
                 platform={productLivePlatform}
                 channel={productLiveChannel}
                 startsAt={productLiveStartsAt}
@@ -131,6 +134,7 @@ export default function WritePage({ params }: WritePageProps) {
                 benefit={productLiveBenefit}
                 buttonLabel={productLiveButtonLabel}
                 onLiveUrlChange={setProductLiveUrl}
+                onStoreNameChange={setProductStoreName}
                 onPlatformChange={setProductLivePlatform}
                 onChannelChange={setProductLiveChannel}
                 onStartsAtChange={setProductLiveStartsAt}

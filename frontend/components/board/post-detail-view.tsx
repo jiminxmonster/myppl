@@ -99,6 +99,12 @@ export function PostDetailView({ slug, postId, initialPost }: PostDetailViewProp
                       <span className="text-right font-bold text-[var(--ink)]">{post.product_live_platform}</span>
                     </div>
                   ) : null}
+                  {post.product_store_name ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-semibold text-slate-500">쇼핑몰</span>
+                      <span className="text-right font-bold text-[var(--ink)]">{post.product_store_name}</span>
+                    </div>
+                  ) : null}
                   {post.product_live_channel ? (
                     <div className="flex items-center justify-between gap-3">
                       <span className="font-semibold text-slate-500">채널</span>

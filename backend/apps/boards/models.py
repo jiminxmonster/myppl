@@ -149,6 +149,7 @@ class Post(models.Model):
     product_original_price = models.DecimalField("상품 원래가격", max_digits=12, decimal_places=0, null=True, blank=True)
     product_sale_price = models.DecimalField("상품 현재가격", max_digits=12, decimal_places=0, null=True, blank=True)
     product_live_url = models.URLField("상품 라이브 방송 링크", max_length=500, blank=True)
+    product_store_name = models.CharField("해당 쇼핑몰 이름", max_length=80, blank=True)
     product_live_platform = models.CharField("라이브 방송 플랫폼", max_length=80, blank=True)
     product_live_channel = models.CharField("라이브 방송 채널명", max_length=100, blank=True)
     product_live_starts_at = models.DateTimeField("라이브 방송 시작일시", null=True, blank=True)

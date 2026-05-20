@@ -78,9 +78,9 @@ export default async function BoardPage({ params }: BoardPageProps) {
                       </p>
                       {originalPrice ? <p className="truncate text-[11px] text-slate-400 line-through sm:text-xs">₩{originalPrice}</p> : null}
                       <p className="truncate text-sm font-black text-[var(--brand)] sm:text-base">{salePrice ? `₩${salePrice}` : "가격 문의"}</p>
-                      {isLiveSpecialBoard && (post.product_live_platform || liveStartLabel) ? (
+                      {isLiveSpecialBoard && (post.product_store_name || liveStartLabel) ? (
                         <p className="truncate text-[10px] font-semibold text-slate-600 sm:text-xs">
-                          {[post.product_live_platform, liveStartLabel].filter(Boolean).join(" · ")}
+                          {[post.product_store_name, liveStartLabel].filter(Boolean).join(" · ")}
                         </p>
                       ) : null}
                       <p className="truncate text-[10px] text-slate-500 sm:text-xs">조회 {post.views} · 댓글 {post.comment_count}</p>

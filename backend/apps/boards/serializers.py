@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from .models import Board, Comment, KeywordFilter, Post, PostImage, Report
+from .shopping_malls import infer_shopping_mall_name
 
 
 class BoardSerializer(serializers.ModelSerializer):
@@ -109,6 +110,7 @@ class PostListSerializer(serializers.ModelSerializer):
             "product_original_price",
             "product_sale_price",
             "product_live_url",
+            "product_store_name",
             "product_live_platform",
             "product_live_channel",
             "product_live_starts_at",
@@ -172,6 +174,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
             "product_original_price",
             "product_sale_price",
             "product_live_url",
+            "product_store_name",
             "product_live_platform",
             "product_live_channel",
             "product_live_starts_at",
@@ -224,6 +227,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
             "product_original_price",
             "product_sale_price",
             "product_live_url",
+            "product_store_name",
             "product_live_platform",
             "product_live_channel",
             "product_live_starts_at",
@@ -253,6 +257,8 @@ class PostWriteSerializer(serializers.ModelSerializer):
         """게시글 생성과 함께 첨부 이미지를 저장한다."""
         images = validated_data.pop("images", [])
         validated_data.pop("remove_image_ids", None)
+        if not validated_data.get("product_store_name"):
+            validated_data["product_store_name"] = infer_shopping_mall_name(validated_data.get("product_live_url"))
         post = Post.objects.create(**validated_data)
         for image in images:
             PostImage.objects.create(post=post, image=image)
@@ -267,6 +273,9 @@ class PostWriteSerializer(serializers.ModelSerializer):
         instance.product_original_price = validated_data.get("product_original_price", instance.product_original_price)
         instance.product_sale_price = validated_data.get("product_sale_price", instance.product_sale_price)
         instance.product_live_url = validated_data.get("product_live_url", instance.product_live_url)
+        instance.product_store_name = validated_data.get("product_store_name", instance.product_store_name)
+        if not instance.product_store_name:
+            instance.product_store_name = infer_shopping_mall_name(instance.product_live_url)
         instance.product_live_platform = validated_data.get("product_live_platform", instance.product_live_platform)
         instance.product_live_channel = validated_data.get("product_live_channel", instance.product_live_channel)
         instance.product_live_starts_at = validated_data.get("product_live_starts_at", instance.product_live_starts_at)

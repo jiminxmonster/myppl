@@ -78,6 +78,7 @@ export type PostSummary = {
   product_original_price?: string | null;
   product_sale_price?: string | null;
   product_live_url?: string;
+  product_store_name?: string;
   product_live_platform?: string;
   product_live_channel?: string;
   product_live_starts_at?: string | null;
@@ -140,6 +141,7 @@ export type PostDetail = {
   product_original_price?: string | null;
   product_sale_price?: string | null;
   product_live_url?: string;
+  product_store_name?: string;
   product_live_platform?: string;
   product_live_channel?: string;
   product_live_starts_at?: string | null;
@@ -1426,6 +1428,7 @@ export async function createPost(
     product_original_price?: string;
     product_sale_price?: string;
     product_live_url?: string;
+    product_store_name?: string;
     product_live_platform?: string;
     product_live_channel?: string;
     product_live_starts_at?: string;
@@ -1442,6 +1445,7 @@ export async function createPost(
   formData.append("product_original_price", payload.product_original_price ?? "");
   formData.append("product_sale_price", payload.product_sale_price ?? "");
   formData.append("product_live_url", payload.product_live_url ?? "");
+  formData.append("product_store_name", payload.product_store_name ?? "");
   formData.append("product_live_platform", payload.product_live_platform ?? "");
   formData.append("product_live_channel", payload.product_live_channel ?? "");
   formData.append("product_live_starts_at", payload.product_live_starts_at ?? "");
@@ -1474,6 +1478,7 @@ export async function updatePost(
     product_original_price?: string;
     product_sale_price?: string;
     product_live_url?: string;
+    product_store_name?: string;
     product_live_platform?: string;
     product_live_channel?: string;
     product_live_starts_at?: string;
@@ -1490,6 +1495,7 @@ export async function updatePost(
   formData.append("product_original_price", payload.product_original_price ?? "");
   formData.append("product_sale_price", payload.product_sale_price ?? "");
   formData.append("product_live_url", payload.product_live_url ?? "");
+  formData.append("product_store_name", payload.product_store_name ?? "");
   formData.append("product_live_platform", payload.product_live_platform ?? "");
   formData.append("product_live_channel", payload.product_live_channel ?? "");
   formData.append("product_live_starts_at", payload.product_live_starts_at ?? "");

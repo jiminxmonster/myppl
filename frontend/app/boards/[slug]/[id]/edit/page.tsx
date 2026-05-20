@@ -30,6 +30,7 @@ export default function EditPostPage({ params }: EditPageProps) {
   const [productOriginalPrice, setProductOriginalPrice] = useState("");
   const [productSalePrice, setProductSalePrice] = useState("");
   const [productLiveUrl, setProductLiveUrl] = useState("");
+  const [productStoreName, setProductStoreName] = useState("");
   const [productLivePlatform, setProductLivePlatform] = useState("");
   const [productLiveChannel, setProductLiveChannel] = useState("");
   const [productLiveStartsAt, setProductLiveStartsAt] = useState("");
@@ -77,6 +78,7 @@ export default function EditPostPage({ params }: EditPageProps) {
         setProductOriginalPrice(post.product_original_price ?? "");
         setProductSalePrice(post.product_sale_price ?? "");
         setProductLiveUrl(post.product_live_url ?? "");
+        setProductStoreName(post.product_store_name ?? "");
         setProductLivePlatform(post.product_live_platform ?? "");
         setProductLiveChannel(post.product_live_channel ?? "");
         setProductLiveStartsAt(formatDateTimeLocal(post.product_live_starts_at));
@@ -137,6 +139,8 @@ export default function EditPostPage({ params }: EditPageProps) {
         product_sale_price: board?.board_type === "product" ? productSalePrice : "",
         product_live_url:
           board?.board_type === "product" && board.product_board_type === "live_special" ? productLiveUrl.trim() : "",
+        product_store_name:
+          board?.board_type === "product" && board.product_board_type === "live_special" ? productStoreName.trim() : "",
         product_live_platform:
           board?.board_type === "product" && board.product_board_type === "live_special" ? productLivePlatform.trim() : "",
         product_live_channel:
@@ -226,6 +230,7 @@ export default function EditPostPage({ params }: EditPageProps) {
             {board.product_board_type === "live_special" ? (
               <LiveBroadcastFields
                 liveUrl={productLiveUrl}
+                storeName={productStoreName}
                 platform={productLivePlatform}
                 channel={productLiveChannel}
                 startsAt={productLiveStartsAt}
@@ -234,6 +239,7 @@ export default function EditPostPage({ params }: EditPageProps) {
                 benefit={productLiveBenefit}
                 buttonLabel={productLiveButtonLabel}
                 onLiveUrlChange={setProductLiveUrl}
+                onStoreNameChange={setProductStoreName}
                 onPlatformChange={setProductLivePlatform}
                 onChannelChange={setProductLiveChannel}
                 onStartsAtChange={setProductLiveStartsAt}

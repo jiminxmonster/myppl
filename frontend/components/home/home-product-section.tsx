@@ -92,10 +92,6 @@ function getRankCrownSrc(rank: number) {
   return null;
 }
 
-function getFallbackMarketName(subtitle: string) {
-  return subtitle.split("·")[0]?.trim() || "";
-}
-
 function RankTopBar({ rank, marketName }: { rank: number; marketName?: string }) {
   const barClassName = getRankBarClassName(rank);
 
@@ -108,8 +104,8 @@ function RankTopBar({ rank, marketName }: { rank: number; marketName?: string })
   const resolvedMarketName = rank <= 3 ? marketName?.trim() : "";
 
   return (
-    <div className={`flex h-12 items-center justify-between gap-3 px-5 text-sm font-black ${barClassName}`} style={barStyle}>
-      <span className="inline-flex items-center gap-2">
+    <div className={`flex h-12 items-center px-5 text-sm font-black ${barClassName}`} style={barStyle}>
+      <span className="inline-flex min-w-0 items-center gap-2">
         {crownSrc ? (
           <span
             aria-hidden="true"
@@ -117,13 +113,13 @@ function RankTopBar({ rank, marketName }: { rank: number; marketName?: string })
             style={{ backgroundImage: `url(${crownSrc})` }}
           />
         ) : null}
-        <span className="text-[1.6em] leading-none">{rank}</span>
+        <span className="shrink-0 text-[1.6em] leading-none">{rank}</span>
+        {resolvedMarketName ? (
+          <span className="min-w-0 truncate text-[0.95rem] font-black leading-none">
+            . {resolvedMarketName}
+          </span>
+        ) : null}
       </span>
-      {resolvedMarketName ? (
-        <span className="max-w-[8rem] truncate rounded-full bg-white/65 px-2.5 py-1 text-[0.7rem] font-black leading-none text-slate-800 shadow-sm backdrop-blur">
-          {resolvedMarketName}
-        </span>
-      ) : null}
     </div>
   );
 }
@@ -326,7 +322,7 @@ export function HomeProductSection({
 
             const cardContent = (
               <>
-                {item.rank ? <RankTopBar rank={item.rank} marketName={item.marketName || getFallbackMarketName(item.subtitle)} /> : null}
+                {item.rank ? <RankTopBar rank={item.rank} marketName={item.marketName} /> : null}
                 <div
                   className="flex aspect-[5/4] items-center justify-center overflow-hidden"
                   style={{
