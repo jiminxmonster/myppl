@@ -1,5 +1,7 @@
 from urllib.parse import urlparse
 
+from django.db import migrations
+
 
 SHOPPING_MALL_HOST_MAP = [
     (("smartstore.naver.com",), "네이버 스마트스토어"),
@@ -22,8 +24,7 @@ SHOPPING_MALL_HOST_MAP = [
 ]
 
 
-def infer_shopping_mall_name(raw_url: str | None) -> str:
-    """외부 상품/라이브 URL에서 쇼핑몰명을 추정한다."""
+def infer_shopping_mall_name(raw_url):
     value = (raw_url or "").strip()
     if not value:
         return ""
@@ -44,3 +45,27 @@ def infer_shopping_mall_name(raw_url: str | None) -> str:
         if any(keyword in lowered_value for keyword in keywords):
             return name
     return ""
+
+
+def backfill_store_names(apps, schema_editor):
+    post_model = apps.get_model("boards", "Post")
+    for post in post_model.objects.filter(product_store_name="", product_live_url__gt="").only(
+        "id",
+        "product_live_url",
+        "product_store_name",
+    ):
+        store_name = infer_shopping_mall_name(post.product_live_url)
+        if store_name:
+            post.product_store_name = store_name
+            post.save(update_fields=["product_store_name"])
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("boards", "0011_post_product_store_name"),
+    ]
+
+    operations = [
+        migrations.RunPython(backfill_store_names, migrations.RunPython.noop),
+    ]

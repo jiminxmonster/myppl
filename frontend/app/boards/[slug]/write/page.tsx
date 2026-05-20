@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { LiveBroadcastFields } from "@/components/board/live-broadcast-fields";
+import { ShoppingMallFields } from "@/components/board/shopping-mall-fields";
 import { PageNavigator } from "@/components/layout/page-navigator";
 import { getStoredTokens } from "@/lib/auth";
 import { BoardItem, createPost, getBoardDetail, ProductLiveStatus } from "@/lib/api";
@@ -61,8 +62,8 @@ export default function WritePage({ params }: WritePageProps) {
         images,
         product_original_price: isProductBoard ? productOriginalPrice : "",
         product_sale_price: isProductBoard ? productSalePrice : "",
-        product_live_url: isLiveSpecialBoard ? productLiveUrl.trim() : "",
-        product_store_name: isLiveSpecialBoard ? productStoreName.trim() : "",
+        product_live_url: isProductBoard ? productLiveUrl.trim() : "",
+        product_store_name: isProductBoard ? productStoreName.trim() : "",
         product_live_platform: isLiveSpecialBoard ? productLivePlatform.trim() : "",
         product_live_channel: isLiveSpecialBoard ? productLiveChannel.trim() : "",
         product_live_starts_at: isLiveSpecialBoard ? productLiveStartsAt : "",
@@ -90,7 +91,6 @@ export default function WritePage({ params }: WritePageProps) {
         ]}
       />
       <h1 className="text-3xl font-bold">{board ? `${board.name} 글쓰기` : "글쓰기"}</h1>
-      {board?.description ? <p className="mt-3 text-sm text-slate-600">{board.description}</p> : null}
       <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
         <label className="block space-y-2">
           <span className="text-sm font-medium">제목</span>
@@ -102,6 +102,14 @@ export default function WritePage({ params }: WritePageProps) {
         </label>
         {isProductBoard ? (
           <div className="grid gap-4 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <ShoppingMallFields
+                link={productLiveUrl}
+                storeName={productStoreName}
+                onLinkChange={setProductLiveUrl}
+                onStoreNameChange={setProductStoreName}
+              />
+            </div>
             <label className="block space-y-2">
               <span className="text-sm font-medium">원래가격</span>
               <input
@@ -124,8 +132,6 @@ export default function WritePage({ params }: WritePageProps) {
             </label>
             {isLiveSpecialBoard ? (
               <LiveBroadcastFields
-                liveUrl={productLiveUrl}
-                storeName={productStoreName}
                 platform={productLivePlatform}
                 channel={productLiveChannel}
                 startsAt={productLiveStartsAt}
@@ -133,8 +139,6 @@ export default function WritePage({ params }: WritePageProps) {
                 status={productLiveStatus}
                 benefit={productLiveBenefit}
                 buttonLabel={productLiveButtonLabel}
-                onLiveUrlChange={setProductLiveUrl}
-                onStoreNameChange={setProductStoreName}
                 onPlatformChange={setProductLivePlatform}
                 onChannelChange={setProductLiveChannel}
                 onStartsAtChange={setProductLiveStartsAt}

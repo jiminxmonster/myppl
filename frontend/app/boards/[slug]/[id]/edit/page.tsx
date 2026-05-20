@@ -4,6 +4,7 @@ import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { LiveBroadcastFields } from "@/components/board/live-broadcast-fields";
+import { ShoppingMallFields } from "@/components/board/shopping-mall-fields";
 import { PageNavigator } from "@/components/layout/page-navigator";
 import { getStoredTokens } from "@/lib/auth";
 import { BoardItem, getBoardDetail, getPostDetail, ProductLiveStatus, resolveMediaUrl, updatePost } from "@/lib/api";
@@ -137,10 +138,8 @@ export default function EditPostPage({ params }: EditPageProps) {
         removeImageIds,
         product_original_price: board?.board_type === "product" ? productOriginalPrice : "",
         product_sale_price: board?.board_type === "product" ? productSalePrice : "",
-        product_live_url:
-          board?.board_type === "product" && board.product_board_type === "live_special" ? productLiveUrl.trim() : "",
-        product_store_name:
-          board?.board_type === "product" && board.product_board_type === "live_special" ? productStoreName.trim() : "",
+        product_live_url: board?.board_type === "product" ? productLiveUrl.trim() : "",
+        product_store_name: board?.board_type === "product" ? productStoreName.trim() : "",
         product_live_platform:
           board?.board_type === "product" && board.product_board_type === "live_special" ? productLivePlatform.trim() : "",
         product_live_channel:
@@ -186,7 +185,6 @@ export default function EditPostPage({ params }: EditPageProps) {
         ]}
       />
       <h1 className="text-3xl font-bold">게시글 수정</h1>
-      <p className="mt-3 text-sm text-slate-600">기존 이미지는 삭제 선택할 수 있고, 새 이미지는 추가 첨부됩니다.</p>
       <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
         <label className="block space-y-2">
           <span className="text-sm font-medium">제목</span>
@@ -196,17 +194,16 @@ export default function EditPostPage({ params }: EditPageProps) {
             onChange={(event) => setTitle(event.target.value)}
           />
         </label>
-        <label className="block space-y-2">
-          <span className="text-sm font-medium">본문</span>
-          <textarea
-            rows={14}
-            className="w-full rounded-[5px] border border-[var(--border)] px-4 py-4 outline-none"
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-          />
-        </label>
         {board?.board_type === "product" ? (
           <div className="grid gap-4 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <ShoppingMallFields
+                link={productLiveUrl}
+                storeName={productStoreName}
+                onLinkChange={setProductLiveUrl}
+                onStoreNameChange={setProductStoreName}
+              />
+            </div>
             <label className="block space-y-2">
               <span className="text-sm font-medium">원래가격</span>
               <input
@@ -229,8 +226,6 @@ export default function EditPostPage({ params }: EditPageProps) {
             </label>
             {board.product_board_type === "live_special" ? (
               <LiveBroadcastFields
-                liveUrl={productLiveUrl}
-                storeName={productStoreName}
                 platform={productLivePlatform}
                 channel={productLiveChannel}
                 startsAt={productLiveStartsAt}
@@ -238,8 +233,6 @@ export default function EditPostPage({ params }: EditPageProps) {
                 status={productLiveStatus}
                 benefit={productLiveBenefit}
                 buttonLabel={productLiveButtonLabel}
-                onLiveUrlChange={setProductLiveUrl}
-                onStoreNameChange={setProductStoreName}
                 onPlatformChange={setProductLivePlatform}
                 onChannelChange={setProductLiveChannel}
                 onStartsAtChange={setProductLiveStartsAt}
@@ -251,6 +244,15 @@ export default function EditPostPage({ params }: EditPageProps) {
             ) : null}
           </div>
         ) : null}
+        <label className="block space-y-2">
+          <span className="text-sm font-medium">본문</span>
+          <textarea
+            rows={14}
+            className="w-full rounded-[5px] border border-[var(--border)] px-4 py-4 outline-none"
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+          />
+        </label>
         {existingImages.length > 0 ? (
           <div className="space-y-3">
             <p className="text-sm font-medium">기존 이미지</p>

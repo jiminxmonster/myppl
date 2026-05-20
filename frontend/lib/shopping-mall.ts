@@ -20,7 +20,7 @@ export const shoppingMallOptions = [
 const shoppingMallHostMap: Array<{ keywords: string[]; name: string }> = [
   { keywords: ["smartstore.naver.com"], name: "네이버 스마트스토어" },
   { keywords: ["brand.naver.com"], name: "네이버 브랜드스토어" },
-  { keywords: ["shoppinglive.naver.com", "shopping.naver.com"], name: "네이버쇼핑" },
+  { keywords: ["shoppinglive.naver.com", "shopping.naver.com", "naver.me"], name: "네이버쇼핑" },
   { keywords: ["coupang.com"], name: "쿠팡" },
   { keywords: ["11st.co.kr"], name: "11번가" },
   { keywords: ["gmarket.co.kr", "g9.co.kr"], name: "G마켓" },

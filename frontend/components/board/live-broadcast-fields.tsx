@@ -1,14 +1,7 @@
-"use client";
-
-import { useEffect } from "react";
-
 import type { ProductLiveStatus } from "@/lib/api";
 import { productLiveStatusOptions } from "@/lib/live-broadcast";
-import { inferShoppingMallName, shoppingMallOptions } from "@/lib/shopping-mall";
 
 type LiveBroadcastFieldsProps = {
-  liveUrl: string;
-  storeName: string;
   platform: string;
   channel: string;
   startsAt: string;
@@ -16,8 +9,6 @@ type LiveBroadcastFieldsProps = {
   status: ProductLiveStatus;
   benefit: string;
   buttonLabel: string;
-  onLiveUrlChange: (value: string) => void;
-  onStoreNameChange: (value: string) => void;
   onPlatformChange: (value: string) => void;
   onChannelChange: (value: string) => void;
   onStartsAtChange: (value: string) => void;
@@ -30,8 +21,6 @@ type LiveBroadcastFieldsProps = {
 const inputClass = "w-full rounded-[5px] border border-[var(--border)] px-4 py-3 outline-none";
 
 export function LiveBroadcastFields({
-  liveUrl,
-  storeName,
   platform,
   channel,
   startsAt,
@@ -39,8 +28,6 @@ export function LiveBroadcastFields({
   status,
   benefit,
   buttonLabel,
-  onLiveUrlChange,
-  onStoreNameChange,
   onPlatformChange,
   onChannelChange,
   onStartsAtChange,
@@ -49,59 +36,12 @@ export function LiveBroadcastFields({
   onBenefitChange,
   onButtonLabelChange,
 }: LiveBroadcastFieldsProps) {
-  const inferredStoreName = inferShoppingMallName(liveUrl);
-
-  useEffect(() => {
-    if (inferredStoreName && !storeName.trim()) {
-      onStoreNameChange(inferredStoreName);
-    }
-  }, [inferredStoreName, onStoreNameChange, storeName]);
-
   return (
     <div className="space-y-4 rounded-[0.5rem] border border-[var(--border)] bg-slate-50 p-4 md:col-span-2">
       <div>
         <p className="text-sm font-bold text-[var(--ink)]">라이브 방송 정보</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="block space-y-2 md:col-span-2">
-          <span className="text-sm font-medium">타사 라이브 방송 링크</span>
-          <input
-            type="url"
-            className={inputClass}
-            placeholder="https://..."
-            value={liveUrl}
-            onChange={(event) => onLiveUrlChange(event.target.value)}
-          />
-        </label>
-        <label className="block space-y-2 md:col-span-2">
-          <span className="text-sm font-medium">해당 쇼핑몰 이름</span>
-          <input
-            className={inputClass}
-            list="shopping-mall-name-options"
-            placeholder={inferredStoreName || "예: 네이버쇼핑, 쿠팡, 브랜드 공식몰"}
-            value={storeName}
-            onChange={(event) => onStoreNameChange(event.target.value)}
-          />
-          <datalist id="shopping-mall-name-options">
-            {shoppingMallOptions.map((option) => (
-              <option key={option} value={option} />
-            ))}
-          </datalist>
-          <div className="flex flex-wrap gap-2">
-            {shoppingMallOptions.slice(0, 8).map((option) => (
-              <button
-                key={option}
-                type="button"
-                className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                  storeName === option ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--border)] bg-white text-slate-600"
-                }`}
-                onClick={() => onStoreNameChange(option)}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </label>
         <label className="block space-y-2">
           <span className="text-sm font-medium">방송 플랫폼</span>
           <input
