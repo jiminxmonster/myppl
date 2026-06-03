@@ -41,7 +41,7 @@ export default async function HomePage() {
     {
       id: "myppl-ad-1",
       title: "비싼광고 No, 나만의 상품을 싸게 홍보한다.",
-      description: "판매자가 직접 올린 상품을 MYPPL 상품리스트와 커뮤니티 흐름 안에서 자연스럽게 노출합니다.",
+      description: "판매자가 직접 올린 상품을 MYPPL 공유 핫이슈와 커뮤니티 흐름 안에서 자연스럽게 노출합니다.",
       href: "/marketplace/sell",
       image: "/branding/myppl_ad_01.svg",
       display_seconds: 4,
