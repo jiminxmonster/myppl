@@ -69,6 +69,7 @@ export default async function HomePage() {
 
   const mypplHeroImageByTitle = new Map(mypplHeroSlides.map((slide) => [slide.title, slide.image]));
   const legacySeedHeroTitles = new Set(["오늘의 특가", "신상 모아보기", "중고장터 추천", "커뮤니티 실시간"]);
+  const isPlaceholderHeroTitle = (title: string) => legacySeedHeroTitles.has(title) || /^\d+$/.test(title.trim());
 
   const configuredHeroSlides = heroSlides
     .filter((slide) => slide.is_active)
@@ -94,7 +95,7 @@ export default async function HomePage() {
       };
     });
 
-  const hasCustomHeroSlides = configuredHeroSlides.some((slide) => !legacySeedHeroTitles.has(String(slide.title)));
+  const hasCustomHeroSlides = configuredHeroSlides.some((slide) => !isPlaceholderHeroTitle(String(slide.title)));
   const activeHeroSlides: HeroSlide[] =
     configuredHeroSlides.length > 0 && hasCustomHeroSlides ? (configuredHeroSlides as HeroSlide[]) : mypplHeroSlides;
 
