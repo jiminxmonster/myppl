@@ -2,15 +2,31 @@ import Link from "next/link";
 
 import { SafeImage } from "@/components/common/safe-image";
 import { PageNavigator } from "@/components/layout/page-navigator";
-import { getBoardDetail, getBoardPosts, getProductPlaceholder, resolveMediaUrl } from "@/lib/api";
+import { TopCategoryIconMenu } from "@/components/layout/top-category-icon-menu";
+import {
+  AdminMenuCategory,
+  getBoardDetail,
+  getBoardPosts,
+  getHotdealCategories,
+  getMarketplaceCategories,
+  getProductPlaceholder,
+  resolveMediaUrl,
+} from "@/lib/api";
 import { formatKoreanDateTime, getProductLiveStatusLabel } from "@/lib/live-broadcast";
 
 type BoardPageProps = {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ category?: string }>;
 };
 
-export default async function BoardPage({ params }: BoardPageProps) {
+type ProductMenuCategory = AdminMenuCategory & {
+  source: "hotdeal" | "marketplace";
+};
+
+export default async function BoardPage({ params, searchParams }: BoardPageProps) {
   const { slug } = await params;
+  const query = (await searchParams) ?? {};
+  const selectedCategorySlug = query.category ? decodeURIComponent(query.category) : null;
   const board = await getBoardDetail(slug).catch(() => null);
   const posts = await getBoardPosts(slug).catch(() => []);
 
@@ -20,6 +36,39 @@ export default async function BoardPage({ params }: BoardPageProps) {
 
   const isProductBoard = board.board_type === "product";
   const isLiveSpecialBoard = isProductBoard && board.product_board_type === "live_special";
+  const showSharedHotIssueMenu = isProductBoard && /핫이슈|hot-issues?/i.test(`${board.name} ${board.slug}`);
+  const [hotdealCategories, marketplaceCategories] = showSharedHotIssueMenu
+    ? await Promise.all([getHotdealCategories().catch(() => []), getMarketplaceCategories().catch(() => [])])
+    : [[], []];
+  const saleCategories: ProductMenuCategory[] = hotdealCategories
+    .filter((category) => category.is_visible)
+    .map((category) => ({
+      ...category,
+      slug: `hotdeal:${category.slug}`,
+      source: "hotdeal" as const,
+    }))
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id);
+  const usedCategories: ProductMenuCategory[] = marketplaceCategories
+    .filter((category) => category.is_visible)
+    .map((category) => ({
+      ...category,
+      slug: `marketplace:${category.slug}`,
+      source: "marketplace" as const,
+    }))
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id);
+  const topCategories = [...saleCategories, ...usedCategories];
+  const groupedMenuCategories = [
+    {
+      id: "sale",
+      label: "판매상품",
+      categories: saleCategories,
+    },
+    {
+      id: "used",
+      label: "중고상품",
+      categories: usedCategories,
+    },
+  ];
 
   return (
     <section className="space-y-6">
@@ -38,6 +87,15 @@ export default async function BoardPage({ params }: BoardPageProps) {
           </Link>
         }
       />
+      {showSharedHotIssueMenu && topCategories.length > 0 ? (
+        <TopCategoryIconMenu
+          basePath={`/boards/${slug}`}
+          categories={topCategories}
+          groupedCategories={groupedMenuCategories}
+          selectedCategorySlug={selectedCategorySlug}
+          refreshSource="products"
+        />
+      ) : null}
       {isProductBoard ? (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-5 lg:gap-4">
           {posts.length > 0 ? (

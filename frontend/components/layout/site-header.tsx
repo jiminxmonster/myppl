@@ -139,9 +139,6 @@ export function SiteHeader() {
           <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-center gap-3">
             <SearchBar />
             <nav className="flex flex-wrap items-center gap-1 text-sm font-semibold text-slate-700">
-              <Link href="/products" className="rounded-[5px] px-4 py-2 hover:bg-[var(--muted)]">
-                상품리스트
-              </Link>
               {topCommunityBoards.map((board) => (
                 <Link key={board.id} href={`/boards/${board.slug}`} className="rounded-[5px] px-4 py-2 hover:bg-[var(--muted)]">
                   {board.name}

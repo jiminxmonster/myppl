@@ -51,7 +51,7 @@ export default async function HomePage() {
       id: "myppl-ad-2",
       title: "가격대비, 최고의 효율 광고",
       description: "조회수 기반 상품 노출과 카테고리 탐색으로 광고비 대비 효율을 높입니다.",
-      href: "/products",
+      href: "/boards/seller-hot-issues",
       image: "/branding/myppl_ad_02.svg",
       display_seconds: 4,
       transition_style: "slide_lr",
