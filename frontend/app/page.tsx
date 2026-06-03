@@ -37,12 +37,38 @@ export default async function HomePage() {
     sellerBoard ? getBoardPosts(sellerBoard.slug).catch(() => []) : Promise.resolve([]),
   ]);
 
-  const heroFallbackImages = [
-    "/branding/promotion_001.png",
-    "/branding/hero_seed_02.svg",
-    "/branding/hero_seed_03.svg",
-    "/branding/hero_seed_04.svg",
+  const mypplHeroSlides: HeroSlide[] = [
+    {
+      id: "myppl-ad-1",
+      title: "비싼광고 No, 나만의 상품을 싸게 홍보한다.",
+      description: "판매자가 직접 올린 상품을 MYPPL 상품리스트와 커뮤니티 흐름 안에서 자연스럽게 노출합니다.",
+      href: "/marketplace/sell",
+      image: "/branding/myppl_ad_01.svg",
+      display_seconds: 4,
+      transition_style: "fade",
+    },
+    {
+      id: "myppl-ad-2",
+      title: "가격대비, 최고의 효율 광고",
+      description: "조회수 기반 상품 노출과 카테고리 탐색으로 광고비 대비 효율을 높입니다.",
+      href: "/products",
+      image: "/branding/myppl_ad_02.svg",
+      display_seconds: 4,
+      transition_style: "slide_lr",
+    },
+    {
+      id: "myppl-ad-3",
+      title: "소비자끼리 서로 공유하고, 좋은 상품 발견하자",
+      description: "구매자와 판매자가 상품 정보를 나누고 조건에 맞는 좋은 상품을 함께 발견합니다.",
+      href: "/boards",
+      image: "/branding/myppl_ad_03.svg",
+      display_seconds: 4,
+      transition_style: "cinema",
+    },
   ];
+
+  const mypplHeroImageByTitle = new Map(mypplHeroSlides.map((slide) => [slide.title, slide.image]));
+  const legacySeedHeroTitles = new Set(["오늘의 특가", "신상 모아보기", "중고장터 추천", "커뮤니티 실시간"]);
 
   const configuredHeroSlides = heroSlides
     .filter((slide) => slide.is_active)
@@ -51,7 +77,7 @@ export default async function HomePage() {
       return {
         ...slide,
         href: slide.href || undefined,
-        image: resolvedImage || heroFallbackImages[index % heroFallbackImages.length],
+        image: mypplHeroImageByTitle.get(slide.title) || resolvedImage || mypplHeroSlides[index % mypplHeroSlides.length].image,
         badge: slide.badge || "광고",
         display_seconds: slide.display_seconds || 3,
         transition_style: (slide.transition_style || "next") as
@@ -68,47 +94,9 @@ export default async function HomePage() {
       };
     });
 
-  const fallbackHeroSlides = [
-    {
-      id: "hero-fallback-1",
-      title: "myPPL 메인 프로모션",
-      description: "실시간 인기 상품과 신규 등록 소식을 바로 확인하세요.",
-      image: heroFallbackImages[0],
-      badge: "광고",
-      display_seconds: 4,
-      transition_style: "next",
-    },
-    {
-      id: "hero-fallback-2",
-      title: "판매자 추천 핫딜",
-      description: "조회수 높은 상품을 빠르게 비교해 보고 바로 이동하세요.",
-      image: heroFallbackImages[1],
-      badge: "광고",
-      display_seconds: 4,
-      transition_style: "slide_lr",
-    },
-    {
-      id: "hero-fallback-3",
-      title: "중고장터 베스트",
-      description: "검토 완료된 인기 중고상품을 카테고리별로 확인할 수 있습니다.",
-      image: heroFallbackImages[2],
-      badge: "광고",
-      display_seconds: 4,
-      transition_style: "fade",
-    },
-    {
-      id: "hero-fallback-4",
-      title: "커뮤니티 지금 화제글",
-      description: "구매자/판매자 커뮤니티 최신 글을 한 번에 살펴보세요.",
-      image: heroFallbackImages[3],
-      badge: "광고",
-      display_seconds: 4,
-      transition_style: "wipe",
-    },
-  ];
-
+  const hasCustomHeroSlides = configuredHeroSlides.some((slide) => !legacySeedHeroTitles.has(String(slide.title)));
   const activeHeroSlides: HeroSlide[] =
-    configuredHeroSlides.length > 0 ? (configuredHeroSlides as HeroSlide[]) : (fallbackHeroSlides as HeroSlide[]);
+    configuredHeroSlides.length > 0 && hasCustomHeroSlides ? (configuredHeroSlides as HeroSlide[]) : mypplHeroSlides;
 
   const fallbackHomeSections: HomeProductSectionConfig[] = [
     {
