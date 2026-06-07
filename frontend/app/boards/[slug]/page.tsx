@@ -37,6 +37,7 @@ export default async function BoardPage({ params, searchParams }: BoardPageProps
   const isProductBoard = board.board_type === "product";
   const isLiveSpecialBoard = isProductBoard && board.product_board_type === "live_special";
   const showSharedHotIssueMenu = isProductBoard && /핫이슈|hot-issues?/i.test(`${board.name} ${board.slug}`);
+  const writeButtonLabel = board.slug === "seller-hot-issues" ? "내상품홍보" : "글쓰기";
   const [hotdealCategories, marketplaceCategories] = showSharedHotIssueMenu
     ? await Promise.all([getHotdealCategories().catch(() => []), getMarketplaceCategories().catch(() => [])])
     : [[], []];
@@ -83,7 +84,7 @@ export default async function BoardPage({ params, searchParams }: BoardPageProps
             href={`/boards/${slug}/write`}
             className="rounded-[5px] bg-[var(--brand)] px-5 py-3 text-center text-sm font-semibold text-white"
           >
-            글쓰기
+            {writeButtonLabel}
           </Link>
         }
       />
