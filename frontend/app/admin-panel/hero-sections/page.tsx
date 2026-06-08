@@ -321,7 +321,7 @@ export default function AdminHeroSectionsPage() {
           {heroSlideEditors.map((item) => (
             <article
               key={item.client_id}
-              className={`grid gap-4 rounded-[0.67rem] border p-5 transition-all md:grid-cols-[56px_1fr_1.3fr] ${
+              className={`grid items-stretch gap-4 rounded-[0.67rem] border p-5 transition-all md:grid-cols-[56px_1fr_1.3fr] ${
                 draggingHeroClientId === item.client_id
                   ? "border-[var(--brand)] bg-[var(--muted)] opacity-80 shadow-lg"
                   : heroDragOverClientId === item.client_id
@@ -352,13 +352,13 @@ export default function AdminHeroSectionsPage() {
                 />
                 <label
                   htmlFor={`hero-image-${item.client_id}`}
-                  className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-[5px] border border-[var(--border)] bg-white p-3 text-center transition hover:bg-slate-50"
+                  className="flex h-[180px] cursor-pointer flex-col items-center justify-center rounded-[5px] border border-[var(--border)] bg-white p-3 text-center transition hover:bg-slate-50"
                 >
                   {item.image_preview_url || item.image ? (
                     <img
                       src={item.image_preview_url || resolveMediaUrl(item.image)}
                       alt={item.title || "썸네일"}
-                      className="h-full max-h-[164px] w-full rounded-[5px] object-cover"
+                      className="h-full w-full rounded-[5px] object-cover"
                     />
                   ) : (
                     <>

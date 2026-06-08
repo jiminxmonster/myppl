@@ -101,7 +101,7 @@ function RankTopBar({ rank, marketName }: { rank: number; marketName?: string })
 
   const crownSrc = getRankCrownSrc(rank);
   const barStyle = getRankBarStyle(rank);
-  const resolvedMarketName = rank <= 3 ? marketName?.trim() : "";
+  const resolvedMarketName = rank <= 4 ? marketName?.trim() : "";
 
   return (
     <div className={`flex h-12 items-center px-5 text-sm font-black ${barClassName}`} style={barStyle}>
@@ -137,7 +137,9 @@ export function HomeProductSection({
   viewAllHref?: string;
   showWhenEmpty?: boolean;
 }) {
-  const minimumDeckCount = 12;
+  const maxRankCount = 30;
+  const rankRowSize = 10;
+  const minimumDeckCount = maxRankCount;
   const dragStateRef = useRef({
     pointerId: -1,
     isDragging: false,
@@ -148,7 +150,7 @@ export function HomeProductSection({
   const suppressClickRef = useRef(false);
 
   const paddedItems = useMemo<DisplayCard[]>(() => {
-    const rankedItems = items.map((item, index) => ({ ...item, rank: index + 1 }));
+    const rankedItems = items.slice(0, maxRankCount).map((item, index) => ({ ...item, rank: index + 1 }));
 
     if (rankedItems.length >= minimumDeckCount) {
       return rankedItems;
@@ -156,16 +158,25 @@ export function HomeProductSection({
 
     const placeholders = Array.from({ length: minimumDeckCount - rankedItems.length }, (_, index) => ({
       id: 100000 + index,
-      title: `추천 상품 슬롯 ${String(index + 1).padStart(2, "0")}`,
+      title: `추천 상품 슬롯 ${String(rankedItems.length + index + 1).padStart(2, "0")}`,
       subtitle: "추가 상품이 여기에 자동으로 채워집니다",
       href: "#",
       price: "업데이트 대기",
       isPlaceholder: true,
       placeholderTone: PLACEHOLDER_TONES[index % PLACEHOLDER_TONES.length],
+      rank: rankedItems.length + index + 1,
     }));
 
     return [...rankedItems, ...placeholders];
-  }, [items]);
+  }, [items, maxRankCount, minimumDeckCount]);
+
+  const rankRows = useMemo(
+    () =>
+      Array.from({ length: Math.ceil(paddedItems.length / rankRowSize) }, (_, rowIndex) =>
+        paddedItems.slice(rowIndex * rankRowSize, rowIndex * rankRowSize + rankRowSize)
+      ),
+    [paddedItems, rankRowSize]
+  );
 
   if (items.length === 0 && !showWhenEmpty) {
     return null;
@@ -305,125 +316,118 @@ export function HomeProductSection({
         ) : null}
       </div>
       <div className="relative overflow-hidden">
-        <div
-          className="home-product-scroller flex gap-4 overflow-x-auto scroll-smooth pb-2"
-          style={{ touchAction: "pan-y" }}
-          onPointerDown={handleDragStart}
-          onPointerMove={handleDragMove}
-          onPointerUp={handleDragEnd}
-          onPointerCancel={handleDragEnd}
-          onClickCapture={handleCardClick}
-          onDragStart={(event) => event.preventDefault()}
-        >
-          {paddedItems.map((item, index) => {
-            const isOnAir = item.liveStatus === "on_air" || item.liveStatusLabel === "진행중";
-            const cardClassName =
-              "block w-[220px] shrink-0 select-none overflow-hidden rounded-[0.67rem] border border-[var(--border)] bg-white shadow-soft transition hover:-translate-y-1 sm:w-[250px] lg:w-[270px]";
-
-            const cardContent = (
-              <>
-                {item.rank ? <RankTopBar rank={item.rank} marketName={item.marketName} /> : null}
-                <div
-                  className="flex aspect-[5/4] items-center justify-center overflow-hidden"
-                  style={{
-                    background: item.isPlaceholder ? item.placeholderTone : "color-mix(in srgb, var(--muted) 30%, white)",
-                  }}
-                >
-                  {item.isPlaceholder ? (
-                    <div className="flex h-full w-full items-center justify-center border border-white/70 bg-white/20 text-center text-sm font-semibold text-slate-600">
-                      임시 상품 슬롯
-                    </div>
-                  ) : (
-                    <SafeImage src={item.image} alt={item.title} className="h-full w-full object-cover" seed={item.title} />
-                  )}
-                </div>
-                <div className="space-y-2 p-4 sm:p-5">
-                  {item.liveStatusLabel ? (
-                    <p
-                      className={`inline-flex items-center gap-1.5 rounded-[4px] px-2 py-1 text-[10px] font-black text-white ${
-                        isOnAir ? "home-live-onair-badge bg-red-600" : "bg-[var(--accent)]"
-                      }`}
-                    >
-                      {isOnAir ? (
-                        <>
-                          <span className="home-live-onair-dot h-1.5 w-1.5 rounded-full bg-white" />
-                          <span className="tracking-[0.08em]">ON AIR</span>
-                        </>
-                      ) : null}
-                      <span>{item.liveStatusLabel}</span>
-                    </p>
-                  ) : null}
-                  <p className="line-clamp-2 min-h-[3rem] text-sm font-semibold text-[var(--ink)] sm:text-base">{item.title}</p>
-                  <p className="text-xs text-slate-500 sm:text-sm">{item.subtitle}</p>
-                  {item.originalPrice ? <p className="mt-3 text-[1.06rem] leading-5 text-red-600 line-through">{item.originalPrice}</p> : null}
-                  {item.price ? <p className="text-[1.1rem] font-bold text-[var(--brand)] sm:text-[1.2375rem]">{item.price}</p> : null}
-                  {item.liveBenefit ? <p className="line-clamp-1 text-xs font-semibold text-[var(--brand)]">{item.liveBenefit}</p> : null}
-                  {item.actionLabel && item.actionHref ? (
-                    <a
-                      href={item.actionHref}
-                      target={item.actionExternal ? "_blank" : undefined}
-                      rel={item.actionExternal ? "noopener noreferrer" : undefined}
-                      className="inline-flex rounded-[5px] bg-[var(--accent)] px-3 py-1 text-xs font-bold text-white"
-                    >
-                      {item.actionLabel}
-                    </a>
-                  ) : item.actionLabel ? (
-                    <p className="inline-flex rounded-[5px] bg-[var(--accent)] px-3 py-1 text-xs font-bold text-white">{item.actionLabel}</p>
-                  ) : null}
-                </div>
-              </>
-            );
-
-            if (item.isPlaceholder) {
-              return (
-                <div
-                  key={`${item.id}-${index}`}
-                  data-home-product-card
-                  className={cardClassName}
-                >
-                  {cardContent}
-                </div>
-              );
-            }
-
-            if (item.actionHref) {
-              return (
-                <div
-                  key={`${item.id}-${index}`}
-                  data-home-product-card
-                  className={cardClassName}
-                >
-                  {cardContent}
-                </div>
-              );
-            }
-
-            if (item.isExternal) {
-              return (
-                <a
-                  key={`${item.id}-${index}`}
-                  href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  draggable={false}
-                  data-home-product-card
-                  className={cardClassName}
-                >
-                  {cardContent}
-                </a>
-              );
-            }
+        <div className="space-y-5">
+          {rankRows.map((rowItems, rowIndex) => {
+            const firstRank = rowIndex * rankRowSize + 1;
+            const lastRank = Math.min(firstRank + rowItems.length - 1, maxRankCount);
 
             return (
-              <Link
-                key={`${item.id}-${index}`}
-                href={item.href}
-                draggable={false}
-                data-home-product-card
-                className={cardClassName}
-              >
-                {cardContent}
-              </Link>
+              <div key={`rank-row-${rowIndex}`} data-home-product-row>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-sm font-black text-[var(--ink)] sm:text-base">
+                    {firstRank}위 - {lastRank}위
+                  </p>
+                  <p className="rounded-full border border-[var(--border)] bg-white px-3 py-1 text-xs font-black text-slate-500">TOP 30</p>
+                </div>
+                <div
+                  className="home-product-scroller flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-2"
+                  style={{ touchAction: "pan-y" }}
+                  onPointerDown={handleDragStart}
+                  onPointerMove={handleDragMove}
+                  onPointerUp={handleDragEnd}
+                  onPointerCancel={handleDragEnd}
+                  onClickCapture={handleCardClick}
+                  onDragStart={(event) => event.preventDefault()}
+                >
+                  {rowItems.map((item, index) => {
+                    const itemIndex = rowIndex * rankRowSize + index;
+                    const isOnAir = item.liveStatus === "on_air" || item.liveStatusLabel === "진행중";
+                    const cardClassName =
+                      "block w-[190px] shrink-0 snap-start select-none overflow-hidden rounded-[0.67rem] border border-[var(--border)] bg-white shadow-soft transition hover:-translate-y-1 sm:w-[210px] lg:w-[230px]";
+
+                    const cardContent = (
+                      <>
+                        {item.rank ? <RankTopBar rank={item.rank} marketName={item.marketName} /> : null}
+                        <div
+                          className="flex aspect-[5/4] items-center justify-center overflow-hidden"
+                          style={{
+                            background: item.isPlaceholder ? item.placeholderTone : "color-mix(in srgb, var(--muted) 30%, white)",
+                          }}
+                        >
+                          {item.isPlaceholder ? (
+                            <div className="flex h-full w-full items-center justify-center border border-white/70 bg-white/20 px-3 text-center text-xs font-semibold text-slate-600 sm:text-sm">
+                              임시 상품 슬롯
+                            </div>
+                          ) : (
+                            <SafeImage src={item.image} alt={item.title} className="h-full w-full object-cover" seed={item.title} />
+                          )}
+                        </div>
+                        <div className="space-y-1.5 p-3 sm:space-y-2 sm:p-4">
+                          {item.liveStatusLabel ? (
+                            <p
+                              className={`inline-flex items-center gap-1.5 rounded-[4px] px-2 py-1 text-[10px] font-black text-white ${
+                                isOnAir ? "home-live-onair-badge bg-red-600" : "bg-[var(--accent)]"
+                              }`}
+                            >
+                              {isOnAir ? (
+                                <>
+                                  <span className="home-live-onair-dot h-1.5 w-1.5 rounded-full bg-white" />
+                                  <span className="tracking-[0.08em]">ON AIR</span>
+                                </>
+                              ) : null}
+                              <span>{item.liveStatusLabel}</span>
+                            </p>
+                          ) : null}
+                          <p className="line-clamp-2 min-h-[2.6rem] text-xs font-semibold text-[var(--ink)] sm:text-sm">{item.title}</p>
+                          <p className="line-clamp-1 text-[11px] text-slate-500 sm:text-xs">{item.subtitle}</p>
+                          {item.originalPrice ? <p className="mt-2 text-sm leading-5 text-red-600 line-through">{item.originalPrice}</p> : null}
+                          {item.price ? <p className="text-base font-bold text-[var(--brand)] sm:text-lg">{item.price}</p> : null}
+                          {item.liveBenefit ? <p className="line-clamp-1 text-xs font-semibold text-[var(--brand)]">{item.liveBenefit}</p> : null}
+                          {item.actionLabel ? (
+                            <p className="inline-flex rounded-[5px] bg-[var(--accent)] px-3 py-1 text-xs font-bold text-white">{item.actionLabel}</p>
+                          ) : null}
+                        </div>
+                      </>
+                    );
+
+                    if (item.isPlaceholder) {
+                      return (
+                        <div key={`${item.id}-${itemIndex}`} data-home-product-card className={cardClassName}>
+                          {cardContent}
+                        </div>
+                      );
+                    }
+
+                    if (item.isExternal) {
+                      return (
+                        <a
+                          key={`${item.id}-${itemIndex}`}
+                          href={item.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          draggable={false}
+                          data-home-product-card
+                          className={cardClassName}
+                        >
+                          {cardContent}
+                        </a>
+                      );
+                    }
+
+                    return (
+                      <Link
+                        key={`${item.id}-${itemIndex}`}
+                        href={item.href}
+                        draggable={false}
+                        data-home-product-card
+                        className={cardClassName}
+                      >
+                        {cardContent}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </div>

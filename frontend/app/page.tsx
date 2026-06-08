@@ -19,6 +19,20 @@ import { inferShoppingMallName } from "@/lib/shopping-mall";
 
 export const dynamic = "force-dynamic";
 
+function normalizeSharedHotIssueTitle(title: string) {
+  const compactTitle = title.replace(/\s+/g, "");
+
+  if (compactTitle === "판매자공유핫이슈") {
+    return "판매자공유핫이슈";
+  }
+
+  if (compactTitle === "소비자공유핫이슈") {
+    return "소비자공유핫이슈";
+  }
+
+  return title;
+}
+
 export default async function HomePage() {
   const [boards, heroSlides, homeSections, hotdeals, marketplaceItems, popularSearchKeywords] = await Promise.all([
     getBoards().catch(() => []),
@@ -28,6 +42,12 @@ export default async function HomePage() {
     getMarketplaceItems().catch(() => []),
     getPopularSearchKeywords(40).catch(() => []),
   ]);
+
+  const heroImageByTitle: Record<string, string> = {
+    "비싼광고 No, 나만의 상품을 싸게 홍보한다.": "/branding/hp_01.png",
+    "가격대비, 최고의 효율 광고": "/branding/hp_02.png",
+    "소비자끼리 서로 공유하고, 좋은 상품 발견하자": "/branding/myppl_ad_03.svg",
+  };
 
   const buyerBoard = boards.find((board) => board.show_in_top_menu && board.audience === "buyer");
   const sellerBoard = boards.find((board) => board.show_in_top_menu && board.audience === "seller");
@@ -43,7 +63,7 @@ export default async function HomePage() {
       title: "비싼광고 No, 나만의 상품을 싸게 홍보한다.",
       description: "판매자가 직접 올린 상품을 MYPPL 공유 핫이슈와 커뮤니티 흐름 안에서 자연스럽게 노출합니다.",
       href: "/marketplace/sell",
-      image: "/branding/myppl_ad_01.svg",
+      image: heroImageByTitle["비싼광고 No, 나만의 상품을 싸게 홍보한다."],
       display_seconds: 4,
       transition_style: "fade",
     },
@@ -52,7 +72,7 @@ export default async function HomePage() {
       title: "가격대비, 최고의 효율 광고",
       description: "조회수 기반 상품 노출과 카테고리 탐색으로 광고비 대비 효율을 높입니다.",
       href: "/boards/seller-hot-issues",
-      image: "/branding/myppl_ad_02.svg",
+      image: heroImageByTitle["가격대비, 최고의 효율 광고"],
       display_seconds: 4,
       transition_style: "slide_lr",
     },
@@ -61,27 +81,32 @@ export default async function HomePage() {
       title: "소비자끼리 서로 공유하고, 좋은 상품 발견하자",
       description: "구매자와 판매자가 상품 정보를 나누고 조건에 맞는 좋은 상품을 함께 발견합니다.",
       href: "/boards",
-      image: "/branding/myppl_ad_03.svg",
+      image: heroImageByTitle["소비자끼리 서로 공유하고, 좋은 상품 발견하자"],
       display_seconds: 4,
       transition_style: "cinema",
     },
   ];
 
-  const mypplHeroImageByTitle = new Map(mypplHeroSlides.map((slide) => [slide.title, slide.image]));
-  const legacySeedHeroTitles = new Set(["오늘의 특가", "신상 모아보기", "중고장터 추천", "커뮤니티 실시간"]);
-  const isPlaceholderHeroTitle = (title: string) => legacySeedHeroTitles.has(title) || /^\d+$/.test(title.trim());
-
   const configuredHeroSlides = heroSlides
     .filter((slide) => slide.is_active)
     .map((slide, index) => {
       const resolvedImage = resolveMediaUrl(slide.image);
+      const normalizedTitle = heroImageByTitle[slide.title] ? slide.title : slide.title.trim();
+      const fallbackImage = heroImageByTitle[normalizedTitle] || mypplHeroSlides[index % mypplHeroSlides.length].image;
+      const forcedMypplSlide = mypplHeroSlides[index];
+      const isDefaultImage =
+        normalizedTitle in heroImageByTitle &&
+        (resolvedImage?.includes("/branding/myppl_ad_") || !resolvedImage || resolvedImage.includes("/media/hero/"));
+
       return {
         ...slide,
-        href: slide.href || undefined,
-        image: mypplHeroImageByTitle.get(slide.title) || resolvedImage || mypplHeroSlides[index % mypplHeroSlides.length].image,
+        title: forcedMypplSlide?.title || slide.title,
+        description: forcedMypplSlide?.description || slide.description,
+        href: forcedMypplSlide?.href || slide.href || undefined,
+        image: forcedMypplSlide?.image || (isDefaultImage ? fallbackImage : resolvedImage || fallbackImage),
         badge: slide.badge || "광고",
-        display_seconds: slide.display_seconds || 3,
-        transition_style: (slide.transition_style || "next") as
+        display_seconds: forcedMypplSlide?.display_seconds || slide.display_seconds || 3,
+        transition_style: (forcedMypplSlide?.transition_style || slide.transition_style || "next") as
           | "next"
           | "slide_lr"
           | "slide_ud"
@@ -95,9 +120,8 @@ export default async function HomePage() {
       };
     });
 
-  const hasCustomHeroSlides = configuredHeroSlides.some((slide) => !isPlaceholderHeroTitle(String(slide.title)));
   const activeHeroSlides: HeroSlide[] =
-    configuredHeroSlides.length > 0 && hasCustomHeroSlides ? (configuredHeroSlides as HeroSlide[]) : mypplHeroSlides;
+    configuredHeroSlides.length > 0 ? (configuredHeroSlides as HeroSlide[]) : mypplHeroSlides;
 
   const fallbackHomeSections: HomeProductSectionConfig[] = [
     {
@@ -127,7 +151,7 @@ export default async function HomePage() {
   const productSections = configuredHomeSections
     .map((section) => {
       const keyword = section.category_keyword.trim();
-      const limit = Math.min(section.item_limit || 30, 30);
+      const limit = 30;
       const hotdealCards = [...hotdeals]
         .sort((left, right) => right.view_count - left.view_count)
         .map((item) => ({
@@ -135,7 +159,7 @@ export default async function HomePage() {
           key: `hotdeal-${item.id}`,
           title: item.title,
           category: item.category_name || "핫딜",
-          marketName: inferShoppingMallName(item.source_url || item.live_url),
+          marketName: inferShoppingMallName(item.source_url || item.live_url) || "MYPPL 핫딜",
           subtitle: `${item.category_name || "핫딜"} · 조회 ${item.view_count}`,
           image: resolveMediaUrl(item.image || getProductPlaceholder("hotdeal", item.category_name)),
           href: `/hotdeals/${item.id}`,
@@ -153,7 +177,7 @@ export default async function HomePage() {
           key: `marketplace-${item.id}`,
           title: item.title,
           category: item.category_name || "상품",
-          marketName: item.source_mode === "imported" ? item.external_provider_name : "",
+          marketName: item.source_mode === "imported" ? item.external_provider_name || "외부연동" : "MYPPL 장터",
           subtitle: `${item.category_name || "상품"} · 조회 ${item.view_count}`,
           image: resolveMediaUrl(item.image || item.external_image_url || getProductPlaceholder("marketplace", item.category_name)),
           href: `/marketplace/${item.id}`,
@@ -179,8 +203,8 @@ export default async function HomePage() {
             category,
             marketName:
               section.board_product_board_type === "live_special"
-                ? item.product_store_name || inferShoppingMallName(item.product_live_url || "")
-                : item.product_store_name || "",
+                ? item.product_store_name || inferShoppingMallName(item.product_live_url || "") || "MYPPL 라이브"
+                : item.product_store_name || "MYPPL 공유",
             subtitle:
               section.board_product_board_type === "live_special"
                 ? [item.product_live_platform, formatKoreanDateTime(item.product_live_starts_at)].filter(Boolean).join(" · ") ||
@@ -266,7 +290,7 @@ export default async function HomePage() {
       {productSections.map((section) => (
         <HomeProductSection
           key={section.id}
-          title={section.title}
+          title={normalizeSharedHotIssueTitle(section.title)}
           description={section.description}
           items={section.items}
           viewAllHref={section.viewAllHref}

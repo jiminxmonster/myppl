@@ -10,11 +10,68 @@ import { NotificationDropdown } from "@/components/layout/notification-dropdown"
 import { SearchBar } from "@/components/layout/search-bar";
 import { useAuthStore } from "@/store/authStore";
 
+const fallbackTopBoards: BoardItem[] = [
+  {
+    id: -1,
+    name: "판매자공유핫이슈",
+    slug: "seller-hot-issues",
+    parent_id: null,
+    board_type: "product",
+    product_board_type: "standard",
+    audience: "all",
+    allowed_writer_roles: ["all"],
+    description: "",
+    show_in_top_menu: true,
+    child_count: 0,
+    sort_order: 0
+  },
+  {
+    id: -2,
+    name: "소비자공유핫이슈",
+    slug: "소비자공유핫이슈",
+    parent_id: null,
+    board_type: "product",
+    product_board_type: "standard",
+    audience: "buyer",
+    allowed_writer_roles: ["all"],
+    description: "",
+    show_in_top_menu: true,
+    child_count: 0,
+    sort_order: 1
+  },
+  {
+    id: -3,
+    name: "커뮤니티",
+    slug: "community-grid",
+    parent_id: null,
+    board_type: "product",
+    product_board_type: "standard",
+    audience: "all",
+    allowed_writer_roles: ["all"],
+    description: "",
+    show_in_top_menu: true,
+    child_count: 0,
+    sort_order: 2
+  }
+];
+
+function getTopMenuLabel(board: BoardItem) {
+  if (board.slug === "seller-hot-issues") {
+    return "판매자공유핫이슈";
+  }
+
+  if (board.slug === "소비자공유핫이슈") {
+    return "소비자공유핫이슈";
+  }
+
+  return board.name;
+}
+
 export function SiteHeader() {
   const pathname = usePathname();
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const user = useAuthStore((state) => state.user);
-  const [boards, setBoards] = useState<BoardItem[]>([]);
+  const [boards, setBoards] = useState<BoardItem[]>(fallbackTopBoards);
   const isOperator = ["moderator", "admin", "superadmin"].includes(user?.operator_role ?? "");
 
   const noticeBoard = boards.find((board) => board.slug === "notice");
@@ -52,7 +109,7 @@ export function SiteHeader() {
         }
       } catch {
         if (mounted) {
-          setBoards([]);
+          setBoards(fallbackTopBoards);
         }
       }
     };
@@ -89,9 +146,9 @@ export function SiteHeader() {
           <div>
             <Link href="/" className="inline-flex items-center">
               <img
-                src="/branding/myppl.png"
+                src="/branding/ppl_b.svg"
                 alt="myppl"
-                className="w-[220px] max-w-full h-auto"
+                className="h-auto w-[110px] max-w-full"
               />
             </Link>
           </div>
@@ -141,7 +198,7 @@ export function SiteHeader() {
             <nav className="flex flex-wrap items-center gap-1 text-sm font-semibold text-slate-700">
               {topCommunityBoards.map((board) => (
                 <Link key={board.id} href={`/boards/${board.slug}`} className="rounded-[5px] px-4 py-2 hover:bg-[var(--muted)]">
-                  {board.name}
+                  {getTopMenuLabel(board)}
                 </Link>
               ))}
               {noticeBoard ? (

@@ -11,6 +11,7 @@ import {
   getMarketplaceCategories,
   getProductPlaceholder,
   resolveMediaUrl,
+  type PostSummary,
 } from "@/lib/api";
 import { formatKoreanDateTime, getProductLiveStatusLabel } from "@/lib/live-broadcast";
 
@@ -22,6 +23,62 @@ type BoardPageProps = {
 type ProductMenuCategory = AdminMenuCategory & {
   source: "hotdeal" | "marketplace";
 };
+
+function normalizeCategoryMatchText(value: string) {
+  return value.replace(/[\/\s_-]+/g, "").trim().toLowerCase();
+}
+
+function getPostCategoryTerms(category?: ProductMenuCategory | null) {
+  if (!category) {
+    return [];
+  }
+
+  const normalized = normalizeCategoryMatchText(`${category.name} ${category.slug}`);
+  const terms = category.name
+    .split(/[\/,\s]+/)
+    .map((term) => term.trim())
+    .filter(Boolean);
+
+  if (normalized.includes("가전") || normalized.includes("디지털")) {
+    terms.push("가전", "디지털", "노트북", "키보드", "마우스", "이어폰", "공기청정기", "태블릿", "충전기", "스피커", "액자");
+  }
+  if (normalized.includes("패션") || normalized.includes("잡화")) {
+    terms.push("패션", "잡화", "의류", "러닝화", "파우치", "브랜드", "가방", "신발");
+  }
+  if (normalized.includes("생활") || normalized.includes("주방")) {
+    terms.push("생활", "주방", "수납", "세제", "침구", "체중계", "의자", "칼세트", "거치대", "정리");
+  }
+  if (normalized.includes("식품") || normalized.includes("건강")) {
+    terms.push("식품", "건강", "반찬", "간편식", "건강즙", "배송", "수분크림");
+  }
+  if (normalized.includes("스포츠") || normalized.includes("레저") || normalized.includes("골프")) {
+    terms.push("스포츠", "레저", "골프", "캠핑", "덤벨", "홈트레이닝");
+  }
+  if (normalized.includes("뷰티")) {
+    terms.push("뷰티", "수분크림", "헤어", "드라이어");
+  }
+
+  return Array.from(new Set(terms.map(normalizeCategoryMatchText).filter(Boolean)));
+}
+
+function postMatchesCategory(post: PostSummary, category?: ProductMenuCategory | null) {
+  const terms = getPostCategoryTerms(category);
+  if (terms.length === 0) {
+    return true;
+  }
+
+  const haystack = normalizeCategoryMatchText(
+    [
+      post.title,
+      post.board_name ?? "",
+      post.product_store_name ?? "",
+      post.product_live_platform ?? "",
+      post.product_live_url ?? "",
+    ].join(" ")
+  );
+
+  return terms.some((term) => haystack.includes(term));
+}
 
 export default async function BoardPage({ params, searchParams }: BoardPageProps) {
   const { slug } = await params;
@@ -37,7 +94,7 @@ export default async function BoardPage({ params, searchParams }: BoardPageProps
   const isProductBoard = board.board_type === "product";
   const isLiveSpecialBoard = isProductBoard && board.product_board_type === "live_special";
   const showSharedHotIssueMenu = isProductBoard && /핫이슈|hot-issues?/i.test(`${board.name} ${board.slug}`);
-  const writeButtonLabel = board.slug === "seller-hot-issues" ? "내상품홍보" : "글쓰기";
+  const writeButtonLabel = showSharedHotIssueMenu ? "내상품홍보" : "글쓰기";
   const [hotdealCategories, marketplaceCategories] = showSharedHotIssueMenu
     ? await Promise.all([getHotdealCategories().catch(() => []), getMarketplaceCategories().catch(() => [])])
     : [[], []];
@@ -70,6 +127,10 @@ export default async function BoardPage({ params, searchParams }: BoardPageProps
       categories: usedCategories,
     },
   ];
+  const selectedCategory = selectedCategorySlug
+    ? topCategories.find((category) => category.slug === selectedCategorySlug) ?? null
+    : null;
+  const visiblePosts = showSharedHotIssueMenu && selectedCategory ? posts.filter((post) => postMatchesCategory(post, selectedCategory)) : posts;
 
   return (
     <section className="space-y-6">
@@ -82,7 +143,9 @@ export default async function BoardPage({ params, searchParams }: BoardPageProps
         actions={
           <Link
             href={`/boards/${slug}/write`}
-            className="rounded-[5px] bg-[var(--brand)] px-5 py-3 text-center text-sm font-semibold text-white"
+            className={`rounded-[5px] px-5 py-3 text-center text-sm font-semibold text-white ${
+              showSharedHotIssueMenu ? "bg-[#ff1f1f]" : "bg-[var(--brand)]"
+            }`}
           >
             {writeButtonLabel}
           </Link>
@@ -99,8 +162,8 @@ export default async function BoardPage({ params, searchParams }: BoardPageProps
       ) : null}
       {isProductBoard ? (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-5 lg:gap-4">
-          {posts.length > 0 ? (
-            posts.map((post) => {
+          {visiblePosts.length > 0 ? (
+            visiblePosts.map((post) => {
               const salePrice = post.product_sale_price ? Number(post.product_sale_price).toLocaleString("ko-KR") : null;
               const originalPrice = post.product_original_price ? Number(post.product_original_price).toLocaleString("ko-KR") : null;
               const liveStartLabel = formatKoreanDateTime(post.product_live_starts_at);
@@ -176,8 +239,8 @@ export default async function BoardPage({ params, searchParams }: BoardPageProps
           <span>댓글수</span>
         </div>
         <div className="divide-y divide-[var(--border)]">
-          {posts.length > 0 ? (
-            posts.map((post) => (
+          {visiblePosts.length > 0 ? (
+            visiblePosts.map((post) => (
               <Link
                 key={post.id}
                 href={`/boards/${slug}/${post.id}`}

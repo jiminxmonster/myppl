@@ -3,6 +3,7 @@ import "./globals.css";
 
 import { AuthBootstrap } from "@/components/auth/auth-bootstrap";
 import { ScrollToTopButton } from "@/components/layout/scroll-to-top-button";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 
 export const metadata: Metadata = {
@@ -24,9 +25,14 @@ export default function RootLayout({
     <html lang="ko">
       <body className="min-h-screen">
         <AuthBootstrap />
-        <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
-          <SiteHeader />
-          <main className="flex-1 py-8">{children}</main>
+        <div className="flex min-h-screen flex-col py-6">
+          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+            <SiteHeader />
+          </div>
+          <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+            <SiteFooter />
+          </div>
         </div>
         <ScrollToTopButton />
       </body>
