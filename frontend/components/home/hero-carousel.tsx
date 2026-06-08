@@ -142,9 +142,10 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
       className="hero-slide relative z-[2] h-full overflow-hidden px-6 py-7 text-white sm:px-10 sm:py-9 lg:px-14"
       style={{
         backgroundImage: `url(${active.image})`,
-        backgroundSize: "cover",
+        backgroundSize: "contain",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
+        backgroundColor: "#0b3de5",
         backfaceVisibility: "hidden",
         transformStyle: "preserve-3d",
       }}
@@ -156,9 +157,10 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
   const baseBackgroundSlide = transitionStyle === "flip" && outgoing ? outgoing : active;
   const wrapperStyle = {
     backgroundImage: `url(${baseBackgroundSlide.image})`,
-    backgroundSize: "cover",
+    backgroundSize: "contain",
     backgroundPosition: "center",
     backgroundRepeat: "no-repeat",
+    backgroundColor: "#0b3de5",
     perspective: "1400px",
   } as const;
 
@@ -172,9 +174,10 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
               className="absolute inset-0 z-[1]"
               style={{
                 backgroundImage: `url(${outgoing.image})`,
-                backgroundSize: "cover",
+                backgroundSize: "contain",
                 backgroundPosition: "center",
                 backgroundRepeat: "no-repeat",
+                backgroundColor: "#0b3de5",
               }}
             />
           ) : null}
@@ -188,9 +191,10 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
               className="absolute inset-0 z-[1]"
               style={{
                 backgroundImage: `url(${outgoing.image})`,
-                backgroundSize: "cover",
+                backgroundSize: "contain",
                 backgroundPosition: "center",
                 backgroundRepeat: "no-repeat",
+                backgroundColor: "#0b3de5",
               }}
             />
           ) : null}
