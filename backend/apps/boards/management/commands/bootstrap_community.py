@@ -371,15 +371,8 @@ class Command(BaseCommand):
             return
 
         section_specs = [
-            {
-                "title": "라이브특가",
-                "description": "라이브특가 그리드형 게시판 상품을 노출합니다.",
-                "source_type": HomeProductSectionConfig.SOURCE_PRODUCT_BOARD,
-                "board": boards.get("live-special"),
-                "category_keyword": "",
-                "item_limit": 30,
-                "sort_order": 0,
-            },
+            # 목표 형태: 상위노출은 판매자공유핫이슈 / 소비자공유핫이슈 두 개만.
+            # 하단 순위/그리드 노출도 이 두 개에 맞춤 (라이브특가 등은 admin에서 정리한 대로 유지)
             {
                 "title": "판매자공유핫이슈",
                 "description": "판매자공유핫이슈 그리드형 게시판 상품을 노출합니다.",
