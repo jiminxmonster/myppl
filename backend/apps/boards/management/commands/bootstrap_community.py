@@ -93,7 +93,7 @@ class Command(BaseCommand):
                 "board_type": Board.BOARD_GENERAL,
                 "description": "구매자들이 원하는 상품, 후기, 요청사항을 나누는 기본 커뮤니티입니다.",
                 "is_visible": True,
-                "show_in_top_menu": True,
+                "show_in_top_menu": False,
                 "audience": Board.AUDIENCE_BUYER,
             },
             {
@@ -102,7 +102,7 @@ class Command(BaseCommand):
                 "board_type": Board.BOARD_GENERAL,
                 "description": "판매자들이 판매 전략, 등록 팁, 운영 정보를 나누는 기본 커뮤니티입니다.",
                 "is_visible": True,
-                "show_in_top_menu": True,
+                "show_in_top_menu": False,
                 "audience": Board.AUDIENCE_SELLER,
             },
             {
@@ -138,7 +138,7 @@ class Command(BaseCommand):
                 "board_type": Board.BOARD_GENERAL,
                 "description": "기존 게시물 호환을 위한 기본 게시판입니다.",
                 "is_visible": True,
-                "show_in_top_menu": True,
+                "show_in_top_menu": False,
                 "audience": Board.AUDIENCE_ALL,
             },
             {
@@ -148,13 +148,13 @@ class Command(BaseCommand):
                 "product_board_type": Board.PRODUCT_BOARD_LIVE_SPECIAL,
                 "description": "타사 라이브 방송 링크를 연결해 노출하는 라이브특가 그리드형 게시판입니다.",
                 "is_visible": True,
-                "show_in_top_menu": True,
+                "show_in_top_menu": False,
                 "audience": Board.AUDIENCE_ALL,
                 "sort_order": 10,
             },
             {
                 "slug": "seller-hot-issues",
-                "name": "판매자 공유 핫이슈",
+                "name": "판매자공유핫이슈",
                 "board_type": Board.BOARD_PRODUCT,
                 "product_board_type": Board.PRODUCT_BOARD_STANDARD,
                 "description": "판매자 공유 핫이슈 상품을 그리드로 모아 보여주는 게시판입니다.",
@@ -165,7 +165,7 @@ class Command(BaseCommand):
             },
             {
                 "slug": "community-grid",
-                "name": "커뮤니티",
+                "name": "소비자공유핫이슈",
                 "board_type": Board.BOARD_PRODUCT,
                 "product_board_type": Board.PRODUCT_BOARD_STANDARD,
                 "description": "커뮤니티 상품형 게시물을 그리드로 모아 보여주는 게시판입니다.",

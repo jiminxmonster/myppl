@@ -3,12 +3,15 @@ import axios from "axios";
 import { getStoredTokens } from "@/lib/auth";
 
 export function getApiBaseUrl() {
+  const internalApiUrl = process.env.NEXT_INTERNAL_API_URL?.trim();
+  const publicApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+
   // 브라우저에서는 공개 URL을, 서버 컴포넌트/SSR에서는 내부 네트워크 주소를 사용한다.
   if (typeof window === "undefined") {
-    return process.env.NEXT_INTERNAL_API_URL ?? "http://backend:8000/api/v1";
+    return internalApiUrl || "http://backend:8000/api/v1";
   }
 
-  return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+  return publicApiUrl || "http://localhost:8000/api/v1";
 }
 
 const apiClient = axios.create({

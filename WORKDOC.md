@@ -249,3 +249,91 @@ npm start -- --port 3100
 - Expected: After new revision + hard refresh on cloud URL, local and deployed UI/content (boards, rankings 3-line, recent communities, hero below) will match closely. Data approx via seed (exact match limited by separate DBs).
 - Decision: Keep local as dev for final UI code; use seed + future proxy if needed for exact data sync. Update WORKDOC on results.
 
+
+### 2026-06-09: Server login fix (deployed cloud version)
+
+- Local login works (native 3100 + local backend, accounts from bootstrap, debug shows API target).
+- Server (https://myppl-frontend-temp-.../login) still shows old generic error because old image deployed.
+- Fixes already in source:
+  - Login page: shows real error message + "API: (actual target URL)" for debugging.
+  - Deploy workflow: backend-temp always runs bootstrap (creates admin/buy/sell accounts).
+  - bootstrap: menu only 판매자공유핫이슈 + 소비자공유핫이슈 in top (names compacted).
+  - CORS: allows temp run.app domains.
+- To apply to server: Trigger 'Deploy Cloud Run' workflow (or push). Ensure GitHub secret NEXT_PUBLIC_API_URL = current myppl-backend-temp public URL (e.g. https://myppl-backend-temp-xxx.a.run.app/api/v1). After new revision, hard refresh cloud URL. Login page will show the baked API target - verify it matches backend. If wrong, update secret and redeploy.
+- Local 3100 native now for dev (Docker frontend stopped).
+- Approval for this server focus: given in query.
+
+
+### 2026-06-09 추가: 서버 로그인 적용 (cloud temp URL 기준)
+
+- 로컬 native 3100: 로그인 정상 (admin/buy/sell 토큰 발급, API debug 표시).
+- 서버 배포판 (https://myppl-frontend-temp-bexuss3nja-du.a.run.app/login): 아직 old image라 generic 에러만 보임 (디버그 없음).
+- 서버 적용 필요 내용 (이미 source에 있음):
+  - Login page: 실제 에러 + "API: (target URL)" 디버그.
+  - Deploy workflow: backend-temp에 RUN_BOOTSTRAP=1 (계정 자동 생성).
+  - bootstrap: 메뉴 이름 판매자공유핫이슈 / 소비자공유핫이슈 (top menu only).
+- 서버에 반영하는 정확한 방법:
+  1. GitHub Secrets의 NEXT_PUBLIC_API_URL을 **현재 myppl-backend-temp 공개 URL** (콘솔에서 복사) 로 업데이트.
+  2. GitHub Actions에서 'Deploy Cloud Run' workflow 수동 실행.
+  3. Cloud Run 콘솔에서 frontend-temp 새 리비전 확인.
+  4. cloud URL 강력 새로고침.
+  5. 로그인 페이지에서 'API: ...' 주소 확인 → secret 값과 맞는지.
+  6. secret 맞추고 재배포 반복.
+- Local은 이미 native + 최신 소스 + seed 데이터로 서버 final에 최대한 맞춤.
+- 다음: 사용자 확인 후 server URL에서 디버그 보고 secret 조정.
+
+
+### 2026-06-09 서버 로그인 현황 (사용자 보고: cloud URL에서 여전히 안 됨)
+- 로컬 native 3100 + local backend: 로그인 정상 (토큰 발급 성공, debug 'API: ...' 표시).
+- 서버 (https://myppl-frontend-temp-bexuss3nja-du.a.run.app/login): 여전히 generic 에러 (old image).
+- 원인: 배포된 frontend 이미지에 새 코드(디버그) + 올바른 baked API_URL 이 없음.
+- 이미 소스에 있는 것: login page real error + target 표시, workflow RUN_BOOTSTRAP=1, bootstrap 메뉴 이름 정리, CORS.
+- 사용자에게 안내한 정확한 단계:
+  1. Cloud Run 콘솔에서 현재 myppl-backend-temp URL 확인.
+  2. GitHub secret NEXT_PUBLIC_API_URL 을 그 URL 로 업데이트.
+  3. GitHub Actions 'Deploy Cloud Run' workflow 수동 실행.
+  4. Cloud Run에서 frontend-temp 새 리비전 확인.
+  5. cloud URL 강력 새로고침.
+  6. 로그인 페이지에서 'API: ...' 확인 → secret 과 일치하는지.
+  7. 안 되면 secret 고치고 3~6 반복.
+- 다음: 사용자 cloud URL 스크린샷 (디버그 보이는지, 어떤 주소 나오는지) + GitHub Actions 로그 + Cloud Run revision 정보 받으면 더 정확히 안내.
+
+
+### 2026-06-09 서버 로그인 복구 (사용자가 backend-temp URL 공유)
+
+- 사용자가 공유한 정확한 backend-temp URL: https://myppl-backend-temp-220680126959.asia-northeast3.run.app
+- 로컬 native 3100은 이미 최신 소스 + local backend로 로그인 정상.
+- 서버에 적용하기 위한 정확한 단계 안내:
+  1. GitHub Secrets의 NEXT_PUBLIC_API_URL (그리고 NEXT_INTERNAL_API_URL)을 위 URL + /api/v1 로 정확히 업데이트.
+  2. GitHub Actions 'Deploy Cloud Run' workflow 수동 실행.
+  3. Cloud Run에서 frontend-temp 새 리비전 확인.
+  4. cloud URL 강력 새로고침 후 로그인 페이지에서 'API: ...' 확인 (이 주소가 backend URL과 일치해야 함).
+  5. 테스트 계정으로 로그인.
+- 소스에는 이미 로그인 디버그, bootstrap 메뉴 정리, workflow RUN_BOOTSTRAP=1 등이 반영됨.
+- 다음: 사용자 실행 결과 보고 (API 주소가 뭐라고 나오는지, 로그인 성공 여부).
+
+### Local ↔ Deployed State Sync Policy (메뉴/게시판/관리자 변경 동기화)
+
+- **기준**: WORKDOC + `bootstrap_community.py` 가 "기본 메뉴/게시판 상태" 의 소스. 배포 주소(cloud)는 사용자 가 보는 "기준 화면" 과 live 데이터.
+- **현재 메뉴 구조 (WORKDOC + 사용자 요청 + bootstrap 스펙 기준)**:
+  - 상단(top) 메뉴: **오직 "판매자공유핫이슈"(slug: seller-hot-issues) + "소비자공유핫이슈"(slug: community-grid)** 만 show_in_top_menu=True, 이름 공백 없이 compacted, audience=ALL.
+  - 다른 게시판(buyer-community, seller-community, notice, free, live-special, hotdeal-board, market-board 등): show_in_top_menu=False (top menu에 노출 안 함).
+  - bootstrap _ensure_boards 가 생성/업데이트 시 name, show_in_top_menu, audience, sort_order 등을 spec 대로 강제 (idempotent).
+- **홈 UI**:
+  - "최근 구매자커뮤니티" / "최근 판매자커뮤니티" 섹션: slug "buyer-community" / "seller-community" 에서 최근 포스트 (top_menu flag 와 무관하게 slug 로 찾도록 수정).
+  - 판매자/소비자 공유 핫이슈 섹션: product board + HomeProductSection + 3줄 랭킹 (1-10,11-20,21-30) per WORKDOC.
+  - SiteHeader fallback 과 getTopMenuLabel 도 두 개의 hot issue 만 초기 렌더/라벨 매핑.
+- **동기화 방법 (앞으로 적용)**:
+  - 서버(배포) admin-panel (게시판관리 등) 에서 메뉴/게시판 visibility, 이름, home sections, sort 등 수정 시 → 변경 내용 (또는 스크린샷) 보고.
+  - 내가 WORKDOC 에 "현재 live spec" 기록.
+  - bootstrap_community.py 의 board_specs / home sections 기본값 업데이트 (재-bootstrap 시 동일 재현).
+  - 로컬: backend 띄우고 `python manage.py bootstrap_community` (또는 shell update) 실행해서 local DB 를 동일 상태로.
+  - Frontend 코드 변경은 로컬 3100 에서 먼저 검증 (build + browser).
+  - 배포 시 workflow 가 backend 에 RUN_BOOTSTRAP=1 로 cloud 를 spec 에 맞춤.
+  - Local frontend 를 임시로 cloud backend API 로 pointing (env override) 해서 server admin 변경 효과를 로컬 UI 에서 바로 확인 가능 (CORS 조정 필요 시 지원).
+- **데이터 차이 인정**: CloudSQL vs local DB 는 exact 포스트/랭킹/이미지 동일 불가. UI 구조 + "final like" 샘플 데이터 (bootstrap --with-sample-data + 추가 포스트) 로 근사. rankings/recent 는 seed 로 30개+ 채움.
+- **이 변경으로**: page.tsx 의 buyer/sellerBoard 찾기와 header fallback/label 을 정리해, top menu 정책(오직 두 hot issue) 과 홈 recent sections 이 동시에 만족되도록 함. 배포/로컬 모두 bootstrap 적용 시 동일 메뉴 상태.
+- 최종: 서버를 "기준"으로 admin 수정하면서도 로컬이 항상 동기화된 상태 유지. WORKDOC 가 항상 최신 spec 참조 문서.
+
+(이 정책은 2026-06-09 이후 모든 admin 변경과 로컬/배포 동기화에 적용.)
+

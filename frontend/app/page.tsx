@@ -49,8 +49,8 @@ export default async function HomePage() {
     "소비자끼리 서로 공유하고, 좋은 상품 발견하자": "/branding/myppl_ad_03.svg",
   };
 
-  const buyerBoard = boards.find((board) => board.show_in_top_menu && board.audience === "buyer");
-  const sellerBoard = boards.find((board) => board.show_in_top_menu && board.audience === "seller");
+  const buyerBoard = boards.find((board) => board.slug === "buyer-community");
+  const sellerBoard = boards.find((board) => board.slug === "seller-community");
 
   const [buyerPosts, sellerPosts] = await Promise.all([
     buyerBoard ? getBoardPosts(buyerBoard.slug).catch(() => []) : Promise.resolve([]),
@@ -87,41 +87,17 @@ export default async function HomePage() {
     },
   ];
 
-  const configuredHeroSlides = heroSlides
-    .filter((slide) => slide.is_active)
-    .map((slide, index) => {
-      const resolvedImage = resolveMediaUrl(slide.image);
-      const normalizedTitle = heroImageByTitle[slide.title] ? slide.title : slide.title.trim();
-      const fallbackImage = heroImageByTitle[normalizedTitle] || mypplHeroSlides[index % mypplHeroSlides.length].image;
-      const forcedMypplSlide = mypplHeroSlides[index];
-      const isDefaultImage =
-        normalizedTitle in heroImageByTitle &&
-        (resolvedImage?.includes("/branding/myppl_ad_") || !resolvedImage || resolvedImage.includes("/media/hero/"));
-
-      return {
-        ...slide,
-        title: forcedMypplSlide?.title || slide.title,
-        description: forcedMypplSlide?.description || slide.description,
-        href: forcedMypplSlide?.href || slide.href || undefined,
-        image: forcedMypplSlide?.image || (isDefaultImage ? fallbackImage : resolvedImage || fallbackImage),
-        badge: slide.badge || "광고",
-        display_seconds: forcedMypplSlide?.display_seconds || slide.display_seconds || 3,
-        transition_style: (forcedMypplSlide?.transition_style || slide.transition_style || "next") as
-          | "next"
-          | "slide_lr"
-          | "slide_ud"
-          | "fade"
-          | "mosaic"
-          | "zoom"
-          | "rotate"
-          | "flip"
-          | "wipe"
-          | "cinema",
-      };
-    });
-
+  // Respect admin hero settings from server as the source of truth.
+  // Only fall back to MYPPL defaults if no active admin slides are configured.
   const activeHeroSlides: HeroSlide[] =
-    configuredHeroSlides.length > 0 ? (configuredHeroSlides as HeroSlide[]) : mypplHeroSlides;
+    heroSlides.length > 0
+      ? heroSlides
+          .filter((slide) => slide.is_active)
+          .map((slide) => ({
+            ...slide,
+            image: resolveMediaUrl(slide.image),
+          }))
+      : mypplHeroSlides;
 
   const fallbackHomeSections: HomeProductSectionConfig[] = [
     {
@@ -290,7 +266,7 @@ export default async function HomePage() {
       {productSections.map((section) => (
         <HomeProductSection
           key={section.id}
-          title={normalizeSharedHotIssueTitle(section.title)}
+          title={section.title}
           description={section.description}
           items={section.items}
           viewAllHref={section.viewAllHref}

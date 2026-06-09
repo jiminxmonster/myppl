@@ -28,20 +28,6 @@ const fallbackTopBoards: BoardItem[] = [
   {
     id: -2,
     name: "소비자공유핫이슈",
-    slug: "소비자공유핫이슈",
-    parent_id: null,
-    board_type: "product",
-    product_board_type: "standard",
-    audience: "buyer",
-    allowed_writer_roles: ["all"],
-    description: "",
-    show_in_top_menu: true,
-    child_count: 0,
-    sort_order: 1
-  },
-  {
-    id: -3,
-    name: "커뮤니티",
     slug: "community-grid",
     parent_id: null,
     board_type: "product",
@@ -51,19 +37,12 @@ const fallbackTopBoards: BoardItem[] = [
     description: "",
     show_in_top_menu: true,
     child_count: 0,
-    sort_order: 2
+    sort_order: 1
   }
 ];
 
 function getTopMenuLabel(board: BoardItem) {
-  if (board.slug === "seller-hot-issues") {
-    return "판매자공유핫이슈";
-  }
-
-  if (board.slug === "소비자공유핫이슈") {
-    return "소비자공유핫이슈";
-  }
-
+  // Use the exact name from admin settings (DB) for consistency with admin panel.
   return board.name;
 }
 
