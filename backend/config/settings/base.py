@@ -176,7 +176,7 @@ AWS_S3_FILE_OVERWRITE = False
 GS_BUCKET_NAME = config("GS_BUCKET_NAME", default="")
 GS_PROJECT_ID = config("GS_PROJECT_ID", default="")
 GS_LOCATION = config("GS_LOCATION", default="")
-GS_DEFAULT_ACL = None
+GS_DEFAULT_ACL = "publicRead"  # 히어로 섹션 이미지 등 공개 미디어의 GCS 경로를 admin에서 직접 탐색(브라우저로 열기) 가능하게 함
 GS_QUERYSTRING_AUTH = config("GS_QUERYSTRING_AUTH", default=False, cast=bool)
 GS_FILE_OVERWRITE = config("GS_FILE_OVERWRITE", default=False, cast=bool)
 GS_CUSTOM_ENDPOINT = config("GS_CUSTOM_ENDPOINT", default="")

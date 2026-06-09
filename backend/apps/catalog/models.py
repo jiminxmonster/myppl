@@ -236,7 +236,11 @@ class HomeHeroSlide(models.Model):
 
     title = models.CharField("슬라이드 제목", max_length=120)
     description = models.CharField("슬라이드 설명", max_length=255, blank=True)
-    image = models.ImageField("슬라이드 이미지", upload_to="catalog/home-hero-slides/")
+    image = models.ImageField(
+        "슬라이드 이미지",
+        upload_to="hero/",
+        help_text="클라우드(GCS)에서는 'hero/파일명' 경로로 저장됩니다. Admin에서 이미지 업로드 후 '경로' 링크를 클릭해 실제 파일 위치를 탐색할 수 있습니다.",
+    )
     badge = models.CharField("배지", max_length=40, blank=True)
     href = models.URLField("연결 URL", blank=True)
     sort_order = models.PositiveIntegerField("정렬 순서", default=0)

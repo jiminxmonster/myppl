@@ -1,0 +1,13 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg
+      - NEXT_PUBLIC_API_URL=https://myppl-backend-temp-bexuss3nja-du.a.run.app/api/v1
+      - --build-arg
+      - NEXT_INTERNAL_API_URL=https://myppl-backend-temp-bexuss3nja-du.a.run.app/api/v1
+      - -t
+      - asia-northeast3-docker.pkg.dev/myppl-495218/comunitysite/frontend:login-fix
+      - .
+images:
+  - asia-northeast3-docker.pkg.dev/myppl-495218/comunitysite/frontend:login-fix

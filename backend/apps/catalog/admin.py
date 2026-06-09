@@ -111,6 +111,49 @@ class SiteDisplaySettingAdmin(admin.ModelAdmin):
 
 @admin.register(HomeHeroSlide)
 class HomeHeroSlideAdmin(admin.ModelAdmin):
-    list_display = ("title", "href", "sort_order", "is_active", "created_at")
+    list_display = ("title", "image_preview", "href", "sort_order", "is_active", "created_at")
     list_filter = ("is_active",)
     search_fields = ("title", "description", "href")
+    readonly_fields = ("image_preview", "image_path", "image_url")
+
+    def image_preview(self, obj):
+        if not obj.image:
+            return "-"
+        try:
+            url = obj.image.url
+            path = obj.image.name
+            return format_html(
+                '<a href="{}" target="_blank" title="클릭하여 실제 이미지 경로 탐색">'
+                '<img src="{}" style="max-height: 60px; max-width: 140px; border: 1px solid #ddd; border-radius: 4px; vertical-align: middle;" />'
+                '<br/><small>경로: <code>{}</code> (새 탭에서 열기)</small>'
+                '</a>',
+                url,
+                url,
+                path,
+            )
+        except Exception:
+            return obj.image.name or "-"
+
+    image_preview.short_description = "이미지 (경로/미리보기)"
+
+    def image_path(self, obj):
+        if not obj.image:
+            return "-"
+        return obj.image.name
+
+    image_path.short_description = "저장 경로 (GCS object name)"
+
+    def image_url(self, obj):
+        if not obj.image:
+            return "-"
+        try:
+            url = obj.image.url
+            return format_html('<a href="{}" target="_blank">{}</a>', url, url)
+        except Exception:
+            return "-"
+
+    image_url.short_description = "전체 공개 URL (클릭하여 탐색)"
+
+    def get_readonly_fields(self, request, obj=None):
+        # 이미지 필드는 업로드용, 미리보기/경로/URL은 읽기 전용으로 별도 표시
+        return super().get_readonly_fields(request, obj) + ("image_preview", "image_path", "image_url")

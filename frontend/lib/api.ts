@@ -412,6 +412,9 @@ export type HomeHeroSlide = {
   title: string;
   description: string;
   image: string;
+  // 클라우드 admin에서 설정한 실제 저장 경로(GCS object)와 전체 URL (탐색용)
+  image_path?: string;
+  image_url?: string;
   badge: string;
   href: string;
   sort_order: number;

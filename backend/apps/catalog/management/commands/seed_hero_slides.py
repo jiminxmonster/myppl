@@ -69,7 +69,8 @@ class Command(BaseCommand):
             slide.sort_order = index
 
             image_bytes = self._build_slide_image(colors=colors)
-            slide.image.save(f"myppl-hero-ad-{index + 1}.png", ContentFile(image_bytes), save=False)
+            # hero/ 경로로 저장 (클라우드 GCS에서 일관된 경로, admin에서 탐색 가능)
+            slide.image.save(f"hero/myppl-hero-ad-{index + 1}.png", ContentFile(image_bytes), save=False)
             slide.save()
 
             if created:
