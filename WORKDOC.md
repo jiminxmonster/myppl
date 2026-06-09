@@ -24,6 +24,17 @@
 - 요청받은 수정만 수행하고, 불필요한 전체 검토나 광범위한 리팩터링은 하지 않는다.
 - 요청 범위를 넘는 검토가 필요하면 먼저 사용자에게 경고하고 승인 후 진행한다.
 
+### 1.2 수정 및 업데이트 작업방식
+
+- 사용자는 배포주소를 기준 화면으로 보고 수정사항을 지시한다.
+- 기준 배포주소는 `https://myppl-frontend-temp-bexuss3nja-du.a.run.app/`이다.
+- 실제 코드는 로컬 작업공간 `/Users/bannykick/Documents/work/comunitysite`에서 수정한다.
+- 수정 후 로컬 `http://localhost:3100`에서 빠르게 확인한다.
+- 로컬 확인 후 사용자가 승인하면 Git 커밋/푸시를 진행한다.
+- GitHub 푸시 후 CI/CD 또는 Cloud Build/Cloud Run 배포로 서버를 업데이트한다.
+- 배포 후에는 Cloud Run 공식 URL과 최신 리비전, 트래픽 100% 연결 여부를 확인한다.
+- 배포주소에서 직접 코드를 수정하지 않는다. 배포주소는 수정 지시와 최종 확인용 화면이다.
+
 ## 2. 원본 문서 통합
 
 - `codex_작업지시서.docx`: 최초 커뮤니티 + 커머스 플랫폼 개발 지시서
@@ -213,3 +224,12 @@ npm start -- --port 3100
 - 요청: `artwork/ppl_a.svg` 파일을 사이트 로고로 사용.
 - 수정: `frontend/public/branding/ppl_a.svg`를 추가하고, 헤더/푸터 로고 경로를 `/branding/ppl_a.svg`로 교체했다.
 - 검증: `npm run build` 통과. 로컬 브라우저에서 헤더/푸터 로고 `src`가 모두 `/branding/ppl_a.svg`로 렌더링됨을 확인했다.
+### 2026-06-09: 로그인 안정화 (Cloud Run temp 배포)
+
+- 기준 배포 주소에서 로그인 generic error 문제 수정
+- 로그인/회원가입 페이지에 실제 API 대상 URL 표시 + 실시간 에러 메시지 개선 (배포 화면에서 호출 주소 바로 확인 가능)
+- deploy-cloud-run.yml: myppl-backend-temp 배포 시 RUN_MIGRATIONS=1, RUN_BOOTSTRAP=1 자동 추가 → test 계정(admin/buy/sell) 항상 생성
+- backend settings: *-temp-*.run.app CORS regex 추가
+- 로컬 http://localhost:3100 + scripts/frontend_apply_check.sh 로 확인 완료
+- 사용자 승인 후 GitHub push → CI/CD로 Cloud Run temp 서비스 업데이트
+
