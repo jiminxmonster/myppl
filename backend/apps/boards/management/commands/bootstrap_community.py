@@ -182,12 +182,10 @@ class Command(BaseCommand):
             if not created:
                 update_fields = []
                 for field in (
-                    "name",
                     "board_type",
                     "product_board_type",
                     "description",
                     "is_visible",
-                    "show_in_top_menu",
                     "audience",
                     "sort_order",
                 ):
