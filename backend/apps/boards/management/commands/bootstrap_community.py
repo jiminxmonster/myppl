@@ -362,7 +362,16 @@ class Command(BaseCommand):
                     provider.save(update_fields=update_fields)
 
     def _ensure_home_product_sections(self, *, boards):
-        """메인 홈의 그리드형 상품 탭 기본값을 준비한다."""
+        """메인 홈의 그리드형 상품 탭 기본값을 준비한다.
+
+        - DB에 HomeProductSectionConfig가 하나도 없으면 (초기 상태) 스펙대로 생성.
+        - 이미 하나라도 있으면 admin에서 사용자가 직접 지우고/수정하고/정리한 상태를 100% 그대로 둔다.
+          (푸시할 때마다 bootstrap이 admin 메뉴설정을 원복시키는 문제를 완전히 막기 위함)
+        """
+        if HomeProductSectionConfig.objects.exists():
+            # admin이 이미 정리 중이거나 커스텀한 상태 → 절대 건드리지 않음
+            return
+
         section_specs = [
             {
                 "title": "라이브특가",
@@ -374,8 +383,8 @@ class Command(BaseCommand):
                 "sort_order": 0,
             },
             {
-                "title": "판매자 공유 핫이슈",
-                "description": "판매자 공유 핫이슈 그리드형 게시판 상품을 노출합니다.",
+                "title": "판매자공유핫이슈",
+                "description": "판매자공유핫이슈 그리드형 게시판 상품을 노출합니다.",
                 "source_type": HomeProductSectionConfig.SOURCE_PRODUCT_BOARD,
                 "board": boards.get("seller-hot-issues"),
                 "category_keyword": "",
@@ -383,8 +392,8 @@ class Command(BaseCommand):
                 "sort_order": 1,
             },
             {
-                "title": "커뮤니티",
-                "description": "커뮤니티 그리드형 게시판 상품을 노출합니다.",
+                "title": "소비자공유핫이슈",
+                "description": "소비자공유핫이슈 그리드형 게시판 상품을 노출합니다.",
                 "source_type": HomeProductSectionConfig.SOURCE_PRODUCT_BOARD,
                 "board": boards.get("community-grid"),
                 "category_keyword": "",
@@ -401,19 +410,7 @@ class Command(BaseCommand):
                 defaults={**section_spec, "is_active": True},
             )
             if created:
-                continue
-            update_fields = []
-            for field in ("description", "source_type", "board", "category_keyword", "item_limit", "sort_order"):
-                current = section.board_id if field == "board" else getattr(section, field)
-                expected = section_spec[field].id if field == "board" and section_spec[field] is not None else section_spec[field]
-                if current != expected:
-                    setattr(section, field, section_spec[field])
-                    update_fields.append(field)
-            if not section.is_active:
-                section.is_active = True
-                update_fields.append("is_active")
-            if update_fields:
-                section.save(update_fields=update_fields)
+                self.stdout.write(f"[홈섹션] {section.title} 생성됨 (초기 시드)")
 
     def _ensure_sample_content(self, *, user, boards):
         """초기 확인용 샘플 콘텐츠를 생성한다."""
