@@ -98,11 +98,18 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 
 # 로컬 프론트엔드와의 통신을 허용하는 기본 CORS 설정이다.
-CORS_ALLOWED_ORIGINS = config(
-    "CORS_ALLOWED_ORIGINS",
-    default="http://localhost:3000,http://127.0.0.1:3000,http://localhost:3100,http://127.0.0.1:3100,http://localhost:8080,http://127.0.0.1:8080",
-    cast=Csv(),
-)
+# GitHub Actions 배포 시 secret으로 CORS_ALLOWED_ORIGINS가 주입되면 그 값이 우선되지만,
+# 로컬 개발(localhost:3100 등)에서 클라우드 temp 백엔드를 테스트할 수 있도록 항상 dev origin을 병합한다.
+_cors_from_env = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
+_dev_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3100",
+    "http://127.0.0.1:3100",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+]
+CORS_ALLOWED_ORIGINS = list(dict.fromkeys([*_cors_from_env, *_dev_origins]))  # 순서 유지 + 중복 제거
 CORS_ALLOW_CREDENTIALS = True
 
 # Cloud Run temp 배포( *-temp-*.run.app )를 위한 추가 허용 (개발/테스트 편의)
