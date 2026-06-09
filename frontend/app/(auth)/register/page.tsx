@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
-import { authApi } from "@/lib/api";
+import { authApi, extractApiError, getApiBaseUrl } from "@/lib/api";
 
 const initialForm: {
   username: string;
@@ -43,7 +43,9 @@ export default function RegisterPage() {
       await authApi.register(form);
       router.push("/login");
     } catch (submitError) {
-      setError("회원가입에 실패했습니다. 중복된 아이디 또는 이메일인지 확인해주세요.");
+      const message = extractApiError(submitError, "회원가입에 실패했습니다. 중복된 아이디 또는 이메일인지 확인해주세요.");
+      const target = getApiBaseUrl();
+      setError(`${message.message} (대상: ${target})`);
     } finally {
       setLoading(false);
     }

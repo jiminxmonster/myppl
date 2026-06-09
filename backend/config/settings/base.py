@@ -105,6 +105,11 @@ CORS_ALLOWED_ORIGINS = config(
 )
 CORS_ALLOW_CREDENTIALS = True
 
+# Cloud Run temp 배포( *-temp-*.run.app )를 위한 추가 허용 (개발/테스트 편의)
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*-temp.*\.run\.app$",
+]
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",

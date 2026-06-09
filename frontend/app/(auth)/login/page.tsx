@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
-import { authApi } from "@/lib/api";
+import { authApi, extractApiError, getApiBaseUrl } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 
 export default function LoginPage() {
@@ -25,7 +25,9 @@ export default function LoginPage() {
       login(data.user, data.access, data.refresh);
       router.push("/");
     } catch (submitError) {
-      setError("로그인에 실패했습니다. 입력값을 다시 확인해주세요.");
+      const message = extractApiError(submitError, "로그인에 실패했습니다. 입력값을 다시 확인해주세요.");
+      const target = getApiBaseUrl();
+      setError(`${message.message} (대상: ${target})`);
     } finally {
       setLoading(false);
     }
@@ -40,6 +42,7 @@ export default function LoginPage() {
         <p className="mt-1">구매자: <strong>buy / buy</strong></p>
         <p>판매자: <strong>sell / sell</strong></p>
         <p>운영자: <strong>admin / admin</strong></p>
+        <p className="mt-2 text-[10px] text-slate-400 break-all">API: {getApiBaseUrl()}</p>
       </div>
       <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
         <label className="block space-y-2">

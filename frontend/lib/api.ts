@@ -2,7 +2,7 @@ import axios from "axios";
 
 import { getStoredTokens } from "@/lib/auth";
 
-function getApiBaseUrl() {
+export function getApiBaseUrl() {
   // 브라우저에서는 공개 URL을, 서버 컴포넌트/SSR에서는 내부 네트워크 주소를 사용한다.
   if (typeof window === "undefined") {
     return process.env.NEXT_INTERNAL_API_URL ?? "http://backend:8000/api/v1";
@@ -24,7 +24,7 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-function extractApiError(error: unknown, fallbackMessage: string): Error {
+export function extractApiError(error: unknown, fallbackMessage: string): Error {
   if (axios.isAxiosError(error)) {
     const responseData = error.response?.data;
     const detail =
