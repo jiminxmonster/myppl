@@ -233,3 +233,19 @@ npm start -- --port 3100
 - 로컬 http://localhost:3100 + scripts/frontend_apply_check.sh 로 확인 완료
 - 사용자 승인 후 GitHub push → CI/CD로 Cloud Run temp 서비스 업데이트
 
+
+### 2026-06-09: Local vs Deployed UI Sync (boards, rankings, recent communities)
+
+- Problem: Local Docker (localhost:3100) had mismatched content vs 기준 배포주소 (cloud temp): empty "최근 구매자커뮤니티", missing main rankings (3-line), boards/lists not updating, hero below not matching final.
+- Cause: Separate DBs (local postgres vs CloudSQL); insufficient sample posts in buyer/hot/comm boards; possible old Docker cache/.next volumes; code for final UI (3-line rankings, "내상품홍보" button) was in source but data not populated to match deployed "final".
+- Actions (WORKDOC rules: local edit/verify first, no push without approval):
+  - Docker clean rebuild (--no-cache, apply_check.sh multiple times) to sync code.
+  - Data seeding: bootstrap --with-sample-data + refresh_sample_product_posts + added recent posts (buyer +5 "최근 구매자 샘플 글", hot/comm to 30 each for full 3-line).
+  - Verified: Buyer 67 posts, hot/comm 30; recent buyer now has latest samples; HomeProductSection has rankRowSize=10 (3 rows); boards/[slug] writeButtonLabel="내상품홍보"; next.config clean (temp proxy removed).
+  - Login debug: page now shows "API: {url}" + real error with target (for diagnosing local vs cloud backend).
+  - Local verify: apply_check.sh passed, containers healthy, 3100 responds.
+- Approval received: "승인".
+- Next: Commit/push (triggers CI/CD to myppl-frontend-temp / myppl-backend-temp with bootstrap on deploy).
+- Expected: After new revision + hard refresh on cloud URL, local and deployed UI/content (boards, rankings 3-line, recent communities, hero below) will match closely. Data approx via seed (exact match limited by separate DBs).
+- Decision: Keep local as dev for final UI code; use seed + future proxy if needed for exact data sync. Update WORKDOC on results.
+
