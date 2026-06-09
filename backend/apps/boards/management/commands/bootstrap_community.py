@@ -182,6 +182,8 @@ class Command(BaseCommand):
             if not created:
                 update_fields = []
                 for field in (
+                    "name",
+                    "show_in_top_menu",
                     "board_type",
                     "product_board_type",
                     "description",
@@ -362,17 +364,10 @@ class Command(BaseCommand):
     def _ensure_home_product_sections(self, *, boards):
         """메인 홈의 그리드형 상품 탭 기본값을 준비한다.
 
-        - DB에 HomeProductSectionConfig가 하나도 없으면 (초기 상태) 스펙대로 생성.
-        - 이미 하나라도 있으면 admin에서 사용자가 직접 지우고/수정하고/정리한 상태를 100% 그대로 둔다.
-          (푸시할 때마다 bootstrap이 admin 메뉴설정을 원복시키는 문제를 완전히 막기 위함)
+        A안(스펙=진실): specs에 정의된 대로 항상 동기화.
+        상위노출/하단 섹션은 bootstrap 스펙이 최종 목표 형태를 정의.
         """
-        if HomeProductSectionConfig.objects.exists():
-            # admin이 이미 정리 중이거나 커스텀한 상태 → 절대 건드리지 않음
-            return
-
         section_specs = [
-            # 목표 형태: 상위노출은 판매자공유핫이슈 / 소비자공유핫이슈 두 개만.
-            # 하단 순위/그리드 노출도 이 두 개에 맞춤 (라이브특가 등은 admin에서 정리한 대로 유지)
             {
                 "title": "판매자공유핫이슈",
                 "description": "판매자공유핫이슈 그리드형 게시판 상품을 노출합니다.",
@@ -402,6 +397,22 @@ class Command(BaseCommand):
             )
             if created:
                 self.stdout.write(f"[홈섹션] {section.title} 생성됨 (초기 시드)")
+                continue
+
+            # 스펙과 다르면 업데이트 (A안: 스펙이 진실)
+            update_fields = []
+            for field in ("description", "source_type", "board", "category_keyword", "item_limit", "sort_order"):
+                current = section.board_id if field == "board" else getattr(section, field)
+                expected = section_spec[field].id if field == "board" and section_spec[field] is not None else section_spec[field]
+                if current != expected:
+                    setattr(section, field, section_spec[field])
+                    update_fields.append(field)
+            if not section.is_active:
+                section.is_active = True
+                update_fields.append("is_active")
+            if update_fields:
+                section.save(update_fields=update_fields)
+                self.stdout.write(f"[홈섹션] {section.title} 스펙 동기화")
 
     def _ensure_sample_content(self, *, user, boards):
         """초기 확인용 샘플 콘텐츠를 생성한다."""
