@@ -4,21 +4,21 @@ import { ChevronDown, Instagram, Mail, MessageCircle, Youtube } from "lucide-rea
 const quickLinks = [
   { label: "서비스 소개", href: "/" },
   { label: "상품게시판", href: "/boards/seller-hot-issues" },
-  { label: "문의하기", href: "/boards/community-grid" },
+  { label: "문의하기", href: "/boards/buyer-community" },
   { label: "광고 안내", href: "/marketplace/sell" },
 ];
 
 const communityLinks = [
   { label: "판매자공유핫이슈", href: "/boards/seller-hot-issues" },
   { label: "소비자공유핫이슈", href: "/boards/소비자공유핫이슈" },
-  { label: "커뮤니티", href: "/boards/community-grid" },
+  { label: "커뮤니티", href: "/boards/buyer-community" },
   { label: "공지", href: "/boards/notice" },
 ];
 
 const supportLinks = [
   { label: "이용 약관", href: "/boards/notice" },
   { label: "개인정보 처리방침", href: "/boards/notice" },
-  { label: "자주 묻는 질문", href: "/boards/community-grid" },
+  { label: "자주 묻는 질문", href: "/boards/buyer-community" },
   { label: "제휴 문의", href: "/boards/seller-hot-issues" },
 ];
 
@@ -42,7 +42,7 @@ export function SiteFooter() {
             ].map(({ label, icon: Icon }) => (
               <Link
                 key={label}
-                href="/boards/community-grid"
+                href="/boards/buyer-community"
                 aria-label={label}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-[5px] border border-[var(--border)] bg-white text-slate-600 transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
               >

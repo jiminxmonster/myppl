@@ -49,13 +49,7 @@ export default async function HomePage() {
     "소비자끼리 서로 공유하고, 좋은 상품 발견하자": "/branding/myppl_ad_03.svg",
   };
 
-  const buyerBoard = boards.find((board) => board.slug === "buyer-community");
-  const sellerBoard = boards.find((board) => board.slug === "seller-community");
 
-  const [buyerPosts, sellerPosts] = await Promise.all([
-    buyerBoard ? getBoardPosts(buyerBoard.slug).catch(() => []) : Promise.resolve([]),
-    sellerBoard ? getBoardPosts(sellerBoard.slug).catch(() => []) : Promise.resolve([]),
-  ]);
 
   const mypplHeroSlides: HeroSlide[] = [
     {
@@ -123,6 +117,11 @@ export default async function HomePage() {
       })),
   );
   const productBoardPostsBySectionId = new Map(productBoardPostEntries.map((entry) => [entry.sectionId, entry.posts]));
+
+  const buyerBoard = boards.find((board) => board.slug === "buyer-community");
+  const [buyerPosts] = await Promise.all([
+    buyerBoard ? getBoardPosts(buyerBoard.slug).catch(() => []) : Promise.resolve([]),
+  ]);
 
   const productSections = configuredHomeSections
     .map((section) => {
@@ -274,53 +273,29 @@ export default async function HomePage() {
         />
       ))}
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <section className="rounded-[0.67rem] border border-[var(--border)] bg-white p-6 shadow-soft">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-[var(--ink)]">최근 구매자커뮤니티</h2>
-            {buyerBoard ? (
-              <Link href={`/boards/${buyerBoard.slug}`} className="text-sm font-semibold text-[var(--brand)]">
-                더보기
+      <section className="rounded-[0.67rem] border border-[var(--border)] bg-white p-6 shadow-soft">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-[var(--ink)]">최근 구매자커뮤니티</h2>
+          {buyerBoard ? (
+            <Link href={`/boards/${buyerBoard.slug}`} className="text-sm font-semibold text-[var(--brand)]">
+              더보기
+            </Link>
+          ) : null}
+        </div>
+        <div className="mt-4 space-y-3">
+          {buyerPosts.length ? (
+            buyerPosts.slice(0, 5).map((post) => (
+              <Link key={post.id} href={`/boards/${buyerBoard?.slug ?? "buyer-community"}/${post.id}`} className="block border-b border-[var(--border)] py-3 last:border-b-0">
+                <p className="font-medium text-[var(--ink)]">{post.title}</p>
+                <p className="mt-1 text-xs text-slate-500">{post.author_nickname}</p>
               </Link>
-            ) : null}
-          </div>
-          <div className="mt-4 space-y-3">
-            {buyerPosts.length ? (
-              buyerPosts.slice(0, 5).map((post) => (
-                <Link key={post.id} href={`/boards/${buyerBoard?.slug ?? "buyer-community"}/${post.id}`} className="block border-b border-[var(--border)] py-3 last:border-b-0">
-                  <p className="font-medium text-[var(--ink)]">{post.title}</p>
-                  <p className="mt-1 text-xs text-slate-500">{post.author_nickname}</p>
-                </Link>
-              ))
-            ) : (
-              <p className="text-sm text-slate-500">아직 등록된 글이 없습니다.</p>
-            )}
-          </div>
-        </section>
+            ))
+          ) : (
+            <p className="text-sm text-slate-500">아직 등록된 글이 없습니다.</p>
+          )}
+        </div>
+      </section>
 
-        <section className="rounded-[0.67rem] border border-[var(--border)] bg-white p-6 shadow-soft">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-[var(--ink)]">최근 판매자커뮤니티</h2>
-            {sellerBoard ? (
-              <Link href={`/boards/${sellerBoard.slug}`} className="text-sm font-semibold text-[var(--brand)]">
-                더보기
-              </Link>
-            ) : null}
-          </div>
-          <div className="mt-4 space-y-3">
-            {sellerPosts.length ? (
-              sellerPosts.slice(0, 5).map((post) => (
-                <Link key={post.id} href={`/boards/${sellerBoard?.slug ?? "seller-community"}/${post.id}`} className="block border-b border-[var(--border)] py-3 last:border-b-0">
-                  <p className="font-medium text-[var(--ink)]">{post.title}</p>
-                  <p className="mt-1 text-xs text-slate-500">{post.author_nickname}</p>
-                </Link>
-              ))
-            ) : (
-              <p className="text-sm text-slate-500">아직 등록된 글이 없습니다.</p>
-            )}
-          </div>
-        </section>
-      </div>
     </section>
   );
 }

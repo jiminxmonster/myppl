@@ -28,7 +28,7 @@ const fallbackTopBoards: BoardItem[] = [
   {
     id: -2,
     name: "소비자공유핫이슈",
-    slug: "community-grid",
+    slug: "buyer-community",
     parent_id: null,
     board_type: "product",
     product_board_type: "standard",
