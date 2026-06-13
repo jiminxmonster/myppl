@@ -3,7 +3,6 @@ import Link from "next/link";
 import { HeroCarousel, type HeroSlide } from "@/components/home/hero-carousel";
 import { HomeProductSection } from "@/components/home/home-product-section";
 import {
-  getBoards,
   getHomeHeroSlides,
   getHomeProductSections,
   getPopularSearchKeywords,
@@ -19,23 +18,8 @@ import { inferShoppingMallName } from "@/lib/shopping-mall";
 
 export const dynamic = "force-dynamic";
 
-function normalizeSharedHotIssueTitle(title: string) {
-  const compactTitle = title.replace(/\s+/g, "");
-
-  if (compactTitle === "판매자공유핫이슈") {
-    return "판매자공유핫이슈";
-  }
-
-  if (compactTitle === "소비자공유핫이슈") {
-    return "소비자공유핫이슈";
-  }
-
-  return title;
-}
-
 export default async function HomePage() {
-  const [boards, heroSlides, homeSections, hotdeals, marketplaceItems, popularSearchKeywords] = await Promise.all([
-    getBoards().catch(() => []),
+  const [heroSlides, homeSections, hotdeals, marketplaceItems, popularSearchKeywords] = await Promise.all([
     getHomeHeroSlides().catch(() => []),
     getHomeProductSections().catch(() => []),
     getHotdeals().catch(() => []),
@@ -117,11 +101,6 @@ export default async function HomePage() {
       })),
   );
   const productBoardPostsBySectionId = new Map(productBoardPostEntries.map((entry) => [entry.sectionId, entry.posts]));
-
-  const buyerBoard = boards.find((board) => board.slug === "buyer-community");
-  const [buyerPosts] = await Promise.all([
-    buyerBoard ? getBoardPosts(buyerBoard.slug).catch(() => []) : Promise.resolve([]),
-  ]);
 
   const productSections = configuredHomeSections
     .map((section) => {
@@ -272,29 +251,6 @@ export default async function HomePage() {
           showWhenEmpty={section.source_type === "product_board"}
         />
       ))}
-
-      <section className="rounded-[0.67rem] border border-[var(--border)] bg-white p-6 shadow-soft">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-[var(--ink)]">최근 구매자커뮤니티</h2>
-          {buyerBoard ? (
-            <Link href={`/boards/${buyerBoard.slug}`} className="text-sm font-semibold text-[var(--brand)]">
-              더보기
-            </Link>
-          ) : null}
-        </div>
-        <div className="mt-4 space-y-3">
-          {buyerPosts.length ? (
-            buyerPosts.slice(0, 5).map((post) => (
-              <Link key={post.id} href={`/boards/${buyerBoard?.slug ?? "buyer-community"}/${post.id}`} className="block border-b border-[var(--border)] py-3 last:border-b-0">
-                <p className="font-medium text-[var(--ink)]">{post.title}</p>
-                <p className="mt-1 text-xs text-slate-500">{post.author_nickname}</p>
-              </Link>
-            ))
-          ) : (
-            <p className="text-sm text-slate-500">아직 등록된 글이 없습니다.</p>
-          )}
-        </div>
-      </section>
 
     </section>
   );

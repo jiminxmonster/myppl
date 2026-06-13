@@ -10,7 +10,7 @@ const quickLinks = [
 
 const communityLinks = [
   { label: "판매자공유핫이슈", href: "/boards/seller-hot-issues" },
-  { label: "소비자공유핫이슈", href: "/boards/소비자공유핫이슈" },
+  { label: "구매자공유핫이슈", href: "/boards/구매자-공유-핫이슈" },
   { label: "커뮤니티", href: "/boards/buyer-community" },
   { label: "공지", href: "/boards/notice" },
 ];

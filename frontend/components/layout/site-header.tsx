@@ -27,8 +27,8 @@ const fallbackTopBoards: BoardItem[] = [
   },
   {
     id: -2,
-    name: "소비자공유핫이슈",
-    slug: "buyer-community",
+    name: "구매자공유핫이슈",
+    slug: "구매자-공유-핫이슈",
     parent_id: null,
     board_type: "product",
     product_board_type: "standard",
@@ -38,6 +38,20 @@ const fallbackTopBoards: BoardItem[] = [
     show_in_top_menu: true,
     child_count: 0,
     sort_order: 1
+  },
+  {
+    id: -3,
+    name: "커뮤니티",
+    slug: "buyer-community",
+    parent_id: null,
+    board_type: "general",
+    product_board_type: "standard",
+    audience: "all",
+    allowed_writer_roles: ["all"],
+    description: "",
+    show_in_top_menu: true,
+    child_count: 0,
+    sort_order: 2
   }
 ];
 
