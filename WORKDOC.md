@@ -1,8 +1,131 @@
 # MYPPL Workdoc
 
-최종 업데이트: 2026-06-07
+최종 업데이트: 2026-06-14
 
 이 문서는 앞으로 MYPPL 작업의 기준 문서로 사용한다. 기존 작업지시서, 운영자 명세서, 개편 지시서, QA 내역, 외부 연동 명세를 하나로 통합해 현재 상태와 다음 작업 기준을 관리한다.
+
+## 0. 최종 운영 정책
+
+MYPPL은 운영자 1명, 개발자 1명 중심의 단일 CMS형 서비스다. 운영자는 Admin을 통해 메뉴, Hero, 카테고리, 게시판, 상품, 게시글을 지속적으로 변경한다. 따라서 운영 데이터는 코드보다 우선한다.
+
+최종 Source of Truth:
+
+- **GitHub = 코드 원본**: frontend, backend, API, migration, Docker 설정을 관리한다.
+- **PostgreSQL = 데이터 원본**: 회원, 상품, 게시글, 댓글, 메뉴, Hero, 카테고리, 운영 설정을 관리한다.
+- **Admin = 운영 원본**: Admin에서 저장한 값이 최종 운영값이다.
+- **Bootstrap = 최초 설치 도구**: 빈 DB, 신규 서버, 재해복구 때만 사용한다.
+
+### 0.1 Bootstrap 정책
+
+기존 코드 중심 구조는 `Code -> Bootstrap -> Database`였다. 이 방식은 운영 중 Admin 설정을 되돌리는 문제가 있어 폐기한다.
+
+Bootstrap에서 허용하는 항목:
+
+- 최초 관리자 계정 생성
+- 최초 권한 생성
+- 필수 게시판 생성
+- 신규 서버 설치 시 사용할 기본 데이터 생성
+
+Bootstrap에서 금지하는 항목:
+
+- 메뉴 강제 동기화
+- Hero 강제 동기화
+- 카테고리 강제 동기화
+- 기존 계정 비밀번호 강제 변경
+- 운영 데이터 UPDATE
+- 일상 배포/재시작/스케일 시 자동 실행
+
+운영 환경 기본값:
+
+- `RUN_BOOTSTRAP=0`
+- 배포 시 `RUN_MIGRATIONS=1`만 허용
+- `bootstrap_community.py`는 운영 DB를 덮어쓰지 않아야 한다.
+
+### 0.2 현재 기준 서버
+
+현재 수정 지시와 검수의 기준 화면은 Google VM이다.
+
+- 기준 화면: `http://34.22.96.236:8080/`
+- VM 경로: `/home/bannykick/comunitysite`
+- 실행 방식: Docker Compose
+- 운영 데이터 원본: VM PostgreSQL
+- 미디어 원본: VM Docker `media_data` volume
+- 코드 원본: GitHub
+
+Cloud Run은 이전 임시 배포 환경이며, 신규 수정/검수 기준으로 사용하지 않는다.
+
+### 0.3 Hero 정책
+
+Hero는 운영 데이터로 취급한다.
+
+```text
+Hero
+-> Admin
+-> PostgreSQL
+-> media volume 또는 object storage
+```
+
+Hero 저장 후 새로고침해도 유지되면 정상이다. Hero는 bootstrap의 필수 관리 대상이 아니다. bootstrap hero는 신규 서버 설치 시 기본 Hero 생성 정도만 허용한다.
+
+### 0.4 개발/배포 방식
+
+코드 문제는 로컬에서 수정한다.
+
+- 버튼
+- UI
+- 업로드
+- API
+- 페이지
+
+데이터 문제는 Admin에서 수정한다.
+
+- Hero
+- 메뉴
+- 카테고리
+- 상품
+- 게시글
+
+작업 흐름:
+
+```text
+로컬 코드 수정
+-> Git commit
+-> Git push
+-> 서버 배포
+```
+
+데이터 흐름:
+
+```text
+Admin 수정
+-> PostgreSQL 저장
+-> 끝
+```
+
+서버는 테스트 및 운영 환경이다. 서버에서 코드를 직접 수정하지 않는다.
+
+### 0.5 인프라 방향
+
+현재는 Google VM + Docker Compose를 운영/검수 서버로 사용한다. 최종 목표는 Vultr + Docker Compose 운영이다.
+
+목표 구성:
+
+- frontend
+- backend
+- postgres
+- redis
+- nginx
+
+Cloud Run에서 발생한 복잡도(`Secret`, `Revision`, `CORS`, `DB_HOST`, `Bootstrap`)는 Docker Compose 운영에서 단순화한다.
+
+### 0.6 JWT 정책
+
+개발 단계에서는 생산성을 우선한다.
+
+- Access token: 365일
+- Refresh token: 365일
+
+운영 전에는 보안 기준에 맞춰 재조정한다.
 
 ## 1. 작업 기준
 
@@ -337,3 +460,175 @@ npm start -- --port 3100
 
 (이 정책은 2026-06-09 이후 모든 admin 변경과 로컬/배포 동기화에 적용.)
 
+## MYPPL 운영 철학 및 워크플로우 (E: 문서 반영)
+
+### Source of Truth
+- **GitHub**: 코드 원본 (Django, Frontend, Migration, Docker, bootstrap 등)
+- **PostgreSQL**: 데이터 원본 (회원, 게시글, 상품, 카테고리, Hero, 메뉴, 모든 운영 설정)
+- **Admin panel**: 운영 원본 (Admin에서 저장한 값이 최종)
+
+코드(bootstrap)는 Admin 데이터를 절대 덮어쓰지 않습니다. Admin 변경 → DB에 바로 반영 → 유지.
+
+### 개발/배포 워크플로우
+1. 로컬에서 개발 (docker compose up - 로컬 postgres 사용)
+2. Git commit & push (코드만)
+3. 서버 배포 (GitHub Actions 또는 docker compose pull/up on VM/Vultr)
+4. 데이터는 PostgreSQL이 관리 (bootstrap은 최초 설치용, 운영 DB는 Admin으로 관리)
+
+### Docker Compose (C: 정리 완료)
+- docker-compose.yml 은 이제 프로덕션(VM/Vultr)에서도 바로 사용 가능하도록 주석과 설정 업데이트.
+- RUN_BOOTSTRAP=0 기본 (운영 DB 보호)
+- restart: unless-stopped 추가
+- db, backend, nginx 등에 대한 프로덕션 가이드 주석 추가
+- 로컬 개발 vs 운영 스택 구분 명확히
+
+사용 예:
+```bash
+cp .env.example .env   # 실제 값 채우기 (DB_PASSWORD 등)
+docker compose build
+docker compose up -d
+```
+
+### 데이터 시드 (D: 스크립트 작성 완료)
+- `python manage.py seed_realistic_data --products=500 --posts=1000 --comments=3000`
+- bootstrap과 별도. 기존 운영 데이터 보호하면서 대량 현실 데이터 추가.
+- --clear 옵션으로 초기화 후 생성 가능 (주의: 샘플만)
+- faker 없으면 간단 랜덤 데이터 사용.
+
+### 이전 절차 (B: 문서화)
+WORKDOC에 pg_dump, 복원, 이미지 이전 상세 절차 추가.
+
+### Bootstrap (1단계 축소 완료)
+- 최초 관리자/권한/필수 게시판만 생성.
+- 모든 운영 설정 (메뉴, Hero, Section, 카테고리 등) 강제 동기화 제거.
+- 기존 계정 비밀번호/권한 절대 건드리지 않음.
+- bootstrap_community.py 상단에 철학 주석 업데이트.
+
+이제 구조: GitHub=코드, PostgreSQL=데이터, Admin=운영, Docker Compose=배포.
+
+---
+
+## MYPPL 운영 철학 (전환 완료 목표)
+
+### Source of Truth
+- **GitHub** = 코드 원본 (Django, Frontend, Migration, Docker 설정 등)
+- **PostgreSQL** = 데이터 원본 (회원, 게시글, 댓글, 상품, 카테고리, Hero, 메뉴, 모든 운영 설정)
+- **Admin panel** = 운영 원본 (메뉴 노출, Hero, Home Section, 카테고리, 설정 등)
+
+Admin에서 저장된 값은 최종값이다. 코드/bootstrap은 절대 Admin 데이터를 덮어쓰지 않는다.
+
+### Bootstrap 역할
+- 최초 설치 / 빈 DB / 재해복구 용도 **only**
+- 상세는 `bootstrap_community.py` 상단 주석 참조
+- bless/dump 는 런타임용이 아님 (일회성 마이그레이션 도구로만 사용)
+
+### 개발/배포 흐름
+1. 로컬에서 개발 (Docker Compose로 frontend + backend + postgres)
+2. Git commit & push (코드만)
+3. 서버에서 docker compose pull/up (또는 GitHub Actions로 이미지 빌드 후 VM 배포)
+4. 데이터는 PostgreSQL이 관리 (대량 테스트 데이터는 실제 서비스 수준으로 수동/스크립트로 생성)
+
+### 인프라 전환 (계획)
+- 현재: Cloud Run + Cloud SQL (bridge 용)
+- 중간: GCE VM + Docker Compose
+- 최종: Vultr + Docker Compose (frontend, backend, postgres)
+
+Cloud SQL 데이터는 pg_dump로 백업 → 새 Postgres로 복원.
+
+### PostgreSQL 이전 절차 (B)
+
+#### 1. Cloud SQL 백업 (현재 운영 DB)
+```bash
+# Cloud Shell 또는 로컬에서 cloud-sql-proxy 실행 후
+pg_dump -h 127.0.0.1 -p 5432 -U ${DB_USER} -d ${DB_NAME} \
+  --no-owner --no-acl -Fc > myppl_cloudsql_backup_$(date +%Y%m%d).dump
+
+# 또는 --data-only / --schema-only 로 분리 가능
+```
+
+이미지/미디어 파일:
+- Cloud Storage (GCS) bucket에서 다운로드하거나 gsutil rsync.
+- 현재 media/ 볼륨이나 GCS 경로에서 수집.
+
+#### 2. 새 PostgreSQL (Docker Compose) 복원
+```bash
+# VM/Vultr에서 docker compose up -d db 로 postgres 시작
+docker compose exec db pg_restore -U admin -d community_db \
+  --no-owner --no-acl /backups/myppl_cloudsql_backup_....dump
+
+# 또는 plain SQL이면 psql -U admin -d community_db < backup.sql
+```
+
+#### 3. 이미지/미디어 복사
+- 새 환경의 media_data 볼륨에 복사.
+- 또는 volume mount 후 rsync.
+- GCS를 계속 쓰는 경우 설정 유지 (USE_GCS_STORAGE).
+
+#### 4. 검증
+- 로그인/게시판/상품/이미지 확인.
+- bootstrap은 절대 돌리지 말고 (RUN_BOOTSTRAP=0).
+- Admin에서 메뉴/Hero 등이 그대로인지 확인.
+
+#### 5. 롤백 대비
+- 백업 파일 + GCS 스냅샷 보관.
+- 새 DB에 --data-only 먼저 테스트 후 전체 복원.
+
+이 절차는 Cloud Run에서 Docker Compose (GCE/Vultr) 로 전환할 때 사용.
+
+---
+
+## 운영 지침 (2026-06 이후, Bootstrap 구조 개선 완료)
+
+### Source of Truth 원칙
+- **GitHub (단일 코드 원본)**: Django/Frontend 코드, Migration, bootstrap_community.py (초기 시드 스펙만)
+- **Cloud SQL / PostgreSQL (단일 운영 데이터 원본)**: 
+  - 모든 admin 설정 (boards_board 의 show_in_top_menu, is_visible, sort_order, 이름, audience 등)
+  - catalog_homeproductsectionconfig (홈 그리드 섹션)
+  - catalog_homeheroslide (히어로 배너)
+  - catalog_productcategory + 필터/옵션
+  - hotdeals_hotdealcategory, marketplace_marketplacecategory
+  - 상품 데이터, 회원, 댓글, 운영 로그 등 전체 운영 데이터
+
+**결론**: Admin panel 에서 변경한 메뉴/노출/정렬/섹션 등은 PostgreSQL 에 저장되면 **그대로 유지**된다. bootstrap 이 절대 덮어쓰지 않는다.
+
+### Bootstrap 사용 범위 (엄격 제한)
+bootstrap_community (및 RUN_BOOTSTRAP=1) 는 **오직** 다음 경우에만 사용:
+- 신규 개발 환경을 위한 빈 DB 생성
+- 신규 서버 / 재해복구 시 초기 데이터 구축
+- 명시적이고 의도적인 전체 초기화 (개발자/운영자가 직접 RUN_BOOTSTRAP=1 주입 후 실행)
+
+**금지**:
+- 운영 중인 서비스 (myppl-backend-temp 등) 에서 자동 실행
+- Admin panel 로 변경한 설정을 bootstrap 이 되돌리는 행위
+- 일상 배포 / 재시작 / 스케일 시 bootstrap 실행
+
+### 환경별 설정
+- **Cloud Run (myppl-backend-temp)**: RUN_BOOTSTRAP 환경변수 **완전 제거** (또는 0). entrypoint.sh 의 if 가 false 가 되어 bootstrap 이 실행되지 않음. (이미 gcloud update 로 00035-7mh revision 에 적용 완료)
+- **GitHub Actions (deploy-cloud-run.yml)**: temp 서비스 배포 시 RUN_BOOTSTRAP 를 절대 --set-env-vars 에 포함하지 않음 (이미 주석으로 보호).
+- **docker-compose.yml (로컬)**: backend 서비스의 RUN_BOOTSTRAP: "0" (기본). `docker compose up` 해도 bootstrap 자동 실행 안 됨. 필요 시 수동으로 컨테이너 exec 해서 `python manage.py bootstrap_community` 실행.
+- **entrypoint.sh**: RUN_BOOTSTRAP=1 일 때만 실행. 상단에 운영 정책 주석 명시.
+
+### bootstrap_community.py 보호 장치 (구현 완료)
+- boards_board, HotdealCategory, MarketplaceCategory, ProductCategory 계열 테이블에 대해:
+  - `if <Model>.objects.exists():` 스킵 + WARNING 로그 ("운영 데이터 존재 → bootstrap ... 스킵 (Admin 설정 유지)")
+- Home sections 는 기존에 title 존재 시 스킵하는 보호가 이미 있었음 (강화 유지).
+- boards 의 force UPDATE 블록 (show_in_top_menu 등)은 빈 DB 에서만 동작.
+- Admin 사용자 계정 / 샘플 데이터는 예외적으로 유지 (운영 설정이 아님).
+
+### Admin 변경 후 유지되는 흐름
+1. Admin panel (클라우드 frontend) 에서 메뉴/노출/섹션/카테고리 수정 → 바로 Cloud SQL 에 저장.
+2. bootstrap 실행 여부와 무관하게 설정 유지.
+3. 로컬 개발 시: 로컬 DB 를 최신으로 맞추고 싶으면 수동 `bootstrap` 또는 shell 로 동기화 (하지만 운영 설정은 cloud DB 가 진실).
+4. 배포/재시작 시 bootstrap 이 실행되지 않으므로 설정 원복 없음.
+
+### 재발 방지 대책
+- RUN_BOOTSTRAP 주입 경로 전수 조사 완료 (compose, workflow, entrypoint, manual, harness 외에는 없음).
+- Cloud Run 서비스에서 var 제거 + 새 revision 배포.
+- bootstrap 함수 상단에 명확한 정책 주석 + exists guard.
+- WORKDOC + bootstrap.py + entrypoint 에 "운영 데이터는 PostgreSQL 이 단일 진실" 명시.
+- 향후 bootstrap 변경 시 반드시 "운영 테이블 UPDATE 여부" 리뷰 필수.
+- Admin 변경 시 사용자 → WORKDOC 기록 → (필요 시) bless 로 코드 스펙 업데이트 (선택, bootstrap 용도일 때만).
+
+이 구조로 전환 후 Admin → PostgreSQL → 유지 가 보장된다.
+
+(이 섹션은 2026-06 bootstrap 구조 개선 작업 완료 후 추가)

@@ -69,7 +69,7 @@ function toHeroSlideEditorItem(slide: HomeHeroSlide): HeroSlideEditorItem {
     transition_style: (slide.transition_style || "next") as HeroTransitionStyle,
     sort_order: slide.sort_order,
     is_active: slide.is_active,
-    image: slide.image,
+    image: slide.image_url || slide.image || "",
     image_file: null,
     image_preview_url: null,
   };

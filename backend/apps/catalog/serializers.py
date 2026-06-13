@@ -78,10 +78,10 @@ class HomeHeroSlideSerializer(serializers.ModelSerializer):
     href = serializers.CharField(allow_blank=True, required=False)
     display_seconds = serializers.IntegerField(min_value=1, max_value=120, required=False)
     transition_style = serializers.ChoiceField(choices=HomeHeroSlide.TRANSITION_CHOICES, required=False)
+    image = serializers.ImageField(required=False)
 
     # 클라우드(GCS)에서 실제 접근 가능한 전체 URL과 저장 경로를 명확히 제공
     # admin( Django / Next admin-panel )에서 경로를 보고 탐색(클릭)할 수 있도록 함
-    image = serializers.SerializerMethodField()
     image_path = serializers.SerializerMethodField()
     image_url = serializers.SerializerMethodField()
 
@@ -128,7 +128,18 @@ class HomeHeroSlideSerializer(serializers.ModelSerializer):
 
     def get_image_url(self, obj):
         """명시적 전체 URL (image와 동일하지만 admin에서 별도 표시용)"""
-        return self.get_image(obj)
+        if obj.image:
+            try:
+                return obj.image.url
+            except Exception:
+                return ""
+        return ""
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if self.instance is None and not attrs.get("image"):
+            raise serializers.ValidationError({"image": "새 히어로광고는 이미지를 등록해야 합니다."})
+        return attrs
 
     class Meta:
         model = HomeHeroSlide

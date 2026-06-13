@@ -95,7 +95,7 @@ export default async function HomePage() {
           .filter((slide) => slide.is_active)
           .map((slide) => ({
             ...slide,
-            image: resolveMediaUrl(slide.image),
+            image: resolveMediaUrl(slide.image_url || slide.image),
           }))
       : mypplHeroSlides;
 

@@ -1,3 +1,21 @@
+# MYPPL Docker Compose (개발 + 운영 스택)
+# 
+# 개발: docker compose up (로컬 전체 스택)
+# 운영 (VM/Vultr 목표): 동일 compose 사용. 이미지 빌드 또는 pull 후 up.
+# 
+# 철학:
+# - GitHub = 코드 원본
+# - PostgreSQL = 데이터 원본 (Admin이 운영 데이터 관리)
+# - bootstrap 은 최초 설치/빈 DB용. 운영 DB 절대 덮어쓰지 않음 (RUN_BOOTSTRAP=0 기본)
+#
+# 사용법 (프로덕션-like):
+#   cp .env.example .env   # 실제 비밀값 채우기
+#   docker compose build
+#   docker compose up -d
+#
+# 데이터 영속: postgres_data, media_data 볼륨
+# Cloud SQL 이전 후에는 로컬/VM postgres 볼륨 사용
+
 services:
   db:
     image: postgres:15
@@ -5,10 +23,12 @@ services:
       POSTGRES_DB: community_db
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+    # 프로덕션에서는 호스트 노출 최소화 (필요 시 DB_EXPOSE_PORT=0 또는 제거)
     ports:
       - "${DB_EXPOSE_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin -d community_db"]
       interval: 10s
@@ -19,6 +39,7 @@ services:
     image: redis:7-alpine
     ports:
       - "${REDIS_EXPOSE_PORT:-6379}:6379"
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -27,7 +48,8 @@ services:
 
   backend:
     build: ./backend
-    command: python manage.py runserver 0.0.0.0:8000
+    # 프로덕션: Dockerfile CMD (daphne) 사용. 개발 시에만 아래 command override
+    # command: python manage.py runserver 0.0.0.0:8000
     ulimits:
       nofile:
         soft: 65536
@@ -41,12 +63,14 @@ services:
       - .env
     environment:
       RUN_MIGRATIONS: "1"
-      RUN_BOOTSTRAP: "1"
+      RUN_BOOTSTRAP: "0"   # 운영 DB 보호 (지시서 철학)
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
+      # 프로덕션 배포 시 코드 볼륨 마운트 제거하고 이미지 사용 권장
       - ./backend:/app
       - media_data:/app/media
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python manage.py check >/dev/null 2>&1 || exit 1"]
       interval: 20s
@@ -69,6 +93,7 @@ services:
       RUN_MIGRATIONS: "0"
     volumes:
       - ./backend:/app
+    restart: unless-stopped
 
   celery-beat:
     build: ./backend
@@ -86,9 +111,11 @@ services:
       RUN_MIGRATIONS: "0"
     volumes:
       - ./backend:/app
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
+    # 프로덕션: Dockerfile 사용 또는 build 후 next start
     command: npm run dev
     ulimits:
       nofile:
@@ -105,6 +132,7 @@ services:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
+    restart: unless-stopped
     healthcheck:
       test:
         [
@@ -127,6 +155,7 @@ services:
       - "${HTTPS_PORT:-443}:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
 
 volumes:
   postgres_data:
