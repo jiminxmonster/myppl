@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { LiveBroadcastFields } from "@/components/board/live-broadcast-fields";
 import { PageNavigator } from "@/components/layout/page-navigator";
 import { getStoredTokens } from "@/lib/auth";
-import { BoardItem, createPost, fetchLinkPreview, getBoardDetail, ProductLiveStatus, uploadInlineImage } from "@/lib/api";
+import { BoardItem, createPost, getBoardDetail, ProductLiveStatus } from "@/lib/api";
 
 type WritePageProps = {
   params: { slug: string };
@@ -37,20 +37,6 @@ export default function WritePage({ params }: WritePageProps) {
       .then((item) => setBoard(item))
       .catch(() => setError("게시판을 찾을 수 없습니다."));
   }, [params.slug]);
-
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      ImageExt,
-      Placeholder.configure({
-        placeholder: "본문을 작성하세요. 상단 이미지 버튼으로 커서 위치에 사진을 삽입할 수 있습니다.",
-      }),
-    ],
-    content: content || "<p></p>",
-    onUpdate: ({ editor }) => {
-      setContent(editor.getHTML());
-    },
-  });
 
   const isProductBoard = board?.board_type === "product";
   const isLiveSpecialBoard = isProductBoard && board?.product_board_type === "live_special";
@@ -169,37 +155,26 @@ export default function WritePage({ params }: WritePageProps) {
           <div className="flex gap-2 mb-1">
             <button
               type="button"
-              onClick={async () => {
-                const input = document.createElement("input");
-                input.type = "file";
-                input.accept = "image/*";
-                input.onchange = async (e: any) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  try {
-                    const { url } = await uploadInlineImage(file);
-                    // insert at end as HTML img (WYSIWYG 방향)
-                    const imgTag = `<img src="${url}" alt="본문 이미지" style="max-width:100%;height:auto;" />`;
-                    setContent((prev) => (prev || "") + "\n" + imgTag + "\n");
-                    alert("이미지가 본문 끝에 삽입되었습니다. (텍스트 사이에 이동 가능)");
-                  } catch (err) {
-                    alert("이미지 업로드 실패");
-                  }
-                };
-                input.click();
+              onClick={() => {
+                // 데모용: 실제 업로드는 /boards/upload-image/ 로 POST 후 URL 받아 삽입
+                // 여기서는 picsum placeholder로 본문에 <img> 태그를 삽입 (상세보기에서 HTML 렌더링)
+                const url = `https://picsum.photos/seed/${Date.now()}/600/400`;
+                const imgTag = `<img src="${url}" alt="본문 이미지" style="max-width:100%;height:auto;border-radius:4px;" />`;
+                setContent((prev) => (prev || "") + "\n" + imgTag + "\n");
+                alert("이미지 태그가 본문에 추가되었습니다. (실제 파일 업로드는 추후 연결)");
               }}
               className="text-xs px-3 py-1 border rounded hover:bg-[var(--muted)]"
             >
-              📷 본문에 이미지 삽입
+              📷 본문에 이미지 삽입 (데모)
             </button>
-            <span className="text-[10px] text-slate-500 self-center">이미지 URL이 본문에 HTML로 들어갑니다. 상세보기에서 그대로 표시.</span>
+            <span className="text-[10px] text-slate-500 self-center">버튼 클릭 시 이미지 태그가 content에 들어갑니다. 상세에서 &lt;img&gt; 로 표시됩니다.</span>
           </div>
           <textarea
             rows={14}
             className="w-full rounded-[5px] border border-[var(--border)] px-4 py-4 outline-none font-mono text-sm"
             value={content}
             onChange={(event) => setContent(event.target.value)}
-            placeholder="본문 작성... 이미지 삽입 버튼으로 <img> 태그를 넣으세요."
+            placeholder="본문 작성... 이미지 삽입 버튼으로 <img> 태그를 넣으세요. (HTML 태그 지원)"
           />
         </label>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
