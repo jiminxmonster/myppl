@@ -265,12 +265,29 @@ export default async function HomePage() {
 
       {/* 게시판노출 (Admin "게시판노출" 설정으로 제어) */}
       {boardSectionsForRender.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="flex flex-wrap gap-4">
           {boardSectionsForRender.map((sec) => {
-            const spanClass = sec.columns === 3 ? "md:col-span-3" : sec.columns === 2 ? "md:col-span-2" : "";
-            const posClass = sec.position === "left" ? "justify-self-start" : sec.position === "right" ? "justify-self-end" : "justify-self-center";
+            // columns에 따라 너비를 명확히 적용 (1열≈33%, 2열≈66%, 3열=100%)
+            const widthClass =
+              sec.columns === 3
+                ? "w-full"
+                : sec.columns === 2
+                ? "w-full md:w-2/3"
+                : "w-full md:w-1/3";
+
+            // position에 따라 정렬 (여러 개가 있을 때 좌/중/우 배치 느낌)
+            const alignClass =
+              sec.position === "left"
+                ? "md:mr-auto"
+                : sec.position === "right"
+                ? "md:ml-auto"
+                : "md:mx-auto";
+
             return (
-              <div key={sec.id} className={`rounded-[0.67rem] border border-[var(--border)] bg-white p-5 shadow-soft ${spanClass} ${posClass}`}>
+              <div
+                key={sec.id}
+                className={`rounded-[0.67rem] border border-[var(--border)] bg-white p-5 shadow-soft ${widthClass} ${alignClass}`}
+              >
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-lg font-bold text-[var(--ink)]">{sec.title}</h3>
                   {sec.board_slug && (
