@@ -16,6 +16,7 @@ import {
   ExternalCatalogCategory,
   HomeProductSectionConfig,
   HomeProductSectionSource,
+  HomeBoardSectionConfig,
   SiteDisplaySettings,
   createAdminHomeHeroSlide,
   createAdminCatalogCategory,
@@ -47,6 +48,10 @@ import {
   deleteAdminHomeHeroSlide,
   getAdminFilterMappings,
   getAdminHomeProductSections,
+  getAdminHomeBoardSections,
+  createAdminHomeBoardSection,
+  updateAdminHomeBoardSection,
+  deleteAdminHomeBoardSection,
   getBoardPosts,
   getMarketplaceItems,
   getProductPlaceholder,
@@ -139,6 +144,21 @@ type HomeSectionEditorItem = {
   board_name?: string | null;
   board_slug?: string | null;
   category_keyword: string;
+  item_limit: number;
+  sort_order: number;
+  is_active: boolean;
+};
+
+type BoardSectionEditorItem = {
+  client_id: string;
+  id: number | null;
+  title: string;
+  board: number | null;
+  board_name?: string | null;
+  board_slug?: string | null;
+  columns: 1 | 2 | 3;
+  position: "left" | "center" | "right";
+  content_mode: "best" | "recent";
   item_limit: number;
   sort_order: number;
   is_active: boolean;
@@ -277,7 +297,98 @@ function reindexHomeSectionEditors(items: HomeSectionEditorItem[]): HomeSectionE
   return items.map((item, index) => ({ ...item, sort_order: index }));
 }
 
+function toBoardSectionEditorItem(section: HomeBoardSectionConfig): BoardSectionEditorItem {
+  return {
+    client_id: `board-section-${section.id}`,
+    id: section.id,
+    title: section.title,
+    board: section.board ?? null,
+    board_name: section.board_name ?? null,
+    board_slug: section.board_slug ?? null,
+    columns: (section.columns || 1) as 1 | 2 | 3,
+    position: section.position || "center",
+    content_mode: section.content_mode || "recent",
+    item_limit: section.item_limit || 5,
+    sort_order: section.sort_order,
+    is_active: section.is_active,
+  };
+}
+
+function reindexBoardSectionEditors(items: BoardSectionEditorItem[]): BoardSectionEditorItem[] {
+  return items.map((item, index) => ({ ...item, sort_order: index }));
+}
+
+function getAllowedPositionsForColumns(columns: 1 | 2 | 3): Array<"left" | "center" | "right"> {
+  if (columns === 1) return ["left", "center", "right"];
+  if (columns === 2) return ["left", "center", "right"]; // allow any start; grid will span
+  return ["left"]; // 3열은 전체 사용 (left로 대표)
+}
+
 export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" }) {
+  // Board section handlers (defined inside component so they have access to state)
+  function handleAddBoardSectionEditor() {
+    const next: BoardSectionEditorItem = {
+      client_id: `new-board-section-${Date.now()}`,
+      id: null,
+      title: "",
+      board: allBoards[0]?.id ?? null,
+      columns: 1,
+      position: "center",
+      content_mode: "recent",
+      item_limit: 5,
+      sort_order: boardSectionEditors.length,
+      is_active: true,
+    };
+    setBoardSectionEditors((current) => reindexBoardSectionEditors([next, ...current]));
+  }
+
+  function updateBoardSectionEditor(clientId: string, patch: Partial<BoardSectionEditorItem>) {
+    setBoardSectionEditors((current) => current.map((item) => (item.client_id === clientId ? { ...item, ...patch } : item)));
+  }
+
+  function handleDeleteBoardSectionEditor(clientId: string) {
+    setBoardSectionEditors((current) => current.filter((item) => item.client_id !== clientId));
+  }
+
+  async function handleSaveBoardSectionEditors() {
+    setError("");
+    setNotice("");
+    try {
+      const ordered = reindexBoardSectionEditors(boardSectionEditors);
+      for (const item of ordered) {
+        if (!item.title.trim()) {
+          throw new Error("게시판 노출 항목에 제목을 입력하세요.");
+        }
+        if (!item.board) {
+          throw new Error(`'${item.title.trim()}' 항목에 연결할 게시판을 선택하세요.`);
+        }
+        const payload = {
+          title: item.title.trim(),
+          board: item.board,
+          columns: item.columns,
+          position: item.position,
+          content_mode: item.content_mode,
+          item_limit: Math.max(1, item.item_limit || 5),
+          sort_order: item.sort_order,
+          is_active: item.is_active,
+        };
+        if (item.id === null) {
+          await createAdminHomeBoardSection(payload as any);
+        } else {
+          await updateAdminHomeBoardSection(item.id, payload as any);
+        }
+      }
+      const fresh = await getAdminHomeBoardSections();
+      setBoardSectionEditors(
+        reindexBoardSectionEditors(
+          [...fresh].sort((a, b) => a.sort_order - b.sort_order || (a.id || 0) - (b.id || 0)).map(toBoardSectionEditorItem)
+        )
+      );
+      handleSuccess("게시판 노출 설정이 저장되었습니다.");
+    } catch (e: any) {
+      setError(e?.message || "게시판 노출 저장에 실패했습니다.");
+    }
+  }
   const [providers, setProviders] = useState<AdminExternalProvider[]>([]);
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [filters, setFilters] = useState<CatalogFilter[]>([]);
@@ -288,7 +399,9 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
   const [categoryMappings, setCategoryMappings] = useState<CatalogCategoryMapping[]>([]);
   const [filterMappings, setFilterMappings] = useState<CatalogFilterMapping[]>([]);
   const [homeSectionEditors, setHomeSectionEditors] = useState<HomeSectionEditorItem[]>([]);
+  const [boardSectionEditors, setBoardSectionEditors] = useState<BoardSectionEditorItem[]>([]);
   const [productBoards, setProductBoards] = useState<AdminBoard[]>([]);
+  const [allBoards, setAllBoards] = useState<AdminBoard[]>([]);
   const [siteSettings, setSiteSettings] = useState<SiteDisplaySettings | null>(null);
   const [draggingHomeSectionId, setDraggingHomeSectionId] = useState<string | null>(null);
   const [homeSectionDragOverId, setHomeSectionDragOverId] = useState<string | null>(null);
@@ -351,18 +464,27 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
   async function loadData() {
     try {
       if (mode === "ranking") {
-        const [homeSectionItems, displaySettings, boardItems] = await Promise.all([
+        const [homeSectionItems, boardSectionItems, displaySettings, boardItems] = await Promise.all([
           getAdminHomeProductSections(),
+          getAdminHomeBoardSections(),
           getAdminSiteDisplaySettings(),
           getAdminBoards(),
         ]);
         setSiteSettings(displaySettings);
         setProductBoards(boardItems.filter((board) => board.board_type === "product"));
+        setAllBoards(boardItems);
         setHomeSectionEditors(
           reindexHomeSectionEditors(
             [...homeSectionItems]
               .sort((left, right) => left.sort_order - right.sort_order || left.id - right.id)
               .map(toHomeSectionEditorItem),
+          ),
+        );
+        setBoardSectionEditors(
+          reindexBoardSectionEditors(
+            [...boardSectionItems]
+              .sort((left, right) => left.sort_order - right.sort_order || left.id - right.id)
+              .map(toBoardSectionEditorItem),
           ),
         );
         setIsHomeSectionOrderDirty(false);
@@ -1401,6 +1523,166 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
           </button>
         </div>
         {isHomeSectionOrderDirty ? <p className="mt-3 text-right text-xs font-semibold text-[var(--brand)]">순서/값 변경됨 - 저장 필요</p> : null}
+      </section>
+      ) : null}
+
+      {/* ===== 게시판노출 (커뮤니티 글 노출) ===== */}
+      {mode === "ranking" ? (
+      <section className="mt-10 rounded-[0.67rem] border border-[var(--border)] bg-white p-8 shadow-soft">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-[var(--ink)]">게시판 노출</h2>
+            <p className="mt-1 text-sm text-slate-600">메인 하단에 일반/커뮤니티 게시판의 글을 노출합니다. 1열/2열/3열 + 위치(좌측/중앙/우측)를 선택하세요. 베스트 또는 최근 컨텐츠를 고를 수 있습니다.</p>
+          </div>
+          <button
+            type="button"
+            className="rounded-[5px] border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--ink)]"
+            onClick={handleAddBoardSectionEditor}
+          >
+            + 게시판노출 추가
+          </button>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          {boardSectionEditors.length > 0 ? (
+            boardSectionEditors.map((item) => {
+              const allowedPositions = getAllowedPositionsForColumns(item.columns);
+              return (
+                <article key={item.client_id} className="rounded-[0.67rem] border border-[var(--border)] bg-white p-5 shadow-soft">
+                  <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+                    <input
+                      className="rounded-[5px] border border-[var(--border)] bg-white px-3 py-2 text-sm font-normal"
+                      placeholder="섹션 제목 (예: 커뮤니티 인기글)"
+                      value={item.title}
+                      onChange={(event) => updateBoardSectionEditor(item.client_id, { title: event.target.value })}
+                    />
+                    <button
+                      type="button"
+                      className="h-10 rounded-[5px] border border-red-200 bg-white px-3 text-xl leading-none text-red-500"
+                      onClick={() => void handleDeleteBoardSectionEditor(item.client_id)}
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <div>
+                      <div className="text-xs font-semibold text-slate-500 mb-1">연결 게시판</div>
+                      <select
+                        className="w-full rounded-[5px] border border-[var(--border)] bg-white px-3 py-2 text-sm"
+                        value={item.board ?? ""}
+                        onChange={(event) => updateBoardSectionEditor(item.client_id, { board: event.target.value ? Number(event.target.value) : null })}
+                      >
+                        <option value="">게시판 선택</option>
+                        {allBoards.map((b) => (
+                          <option key={b.id} value={b.id}>{b.name} ({b.slug})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-semibold text-slate-500 mb-1">노출 열 수</div>
+                      <div className="flex gap-2">
+                        {[1, 2, 3].map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            className={`flex-1 rounded-[5px] border px-3 py-1.5 text-sm ${item.columns === c ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--border)] bg-white"}`}
+                            onClick={() => {
+                              const newCols = c as 1 | 2 | 3;
+                              const newAllowed = getAllowedPositionsForColumns(newCols);
+                              const newPos = newAllowed.includes(item.position) ? item.position : newAllowed[0];
+                              updateBoardSectionEditor(item.client_id, { columns: newCols, position: newPos });
+                            }}
+                          >
+                            {c}열
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-semibold text-slate-500 mb-1">위치 (중복 선택 불가, 앞 영역 차지 시 선택 제한)</div>
+                      <div className="flex gap-2">
+                        {(["left", "center", "right"] as const).map((pos) => {
+                          const label = pos === "left" ? "좌측" : pos === "center" ? "중앙" : "우측";
+                          const disabled = !allowedPositions.includes(pos);
+                          return (
+                            <label key={pos} className={`inline-flex items-center gap-1 rounded-[5px] border px-3 py-1.5 text-sm cursor-pointer ${disabled ? "opacity-40" : ""} ${item.position === pos ? "border-[var(--brand)] bg-[var(--muted)]" : "border-[var(--border)] bg-white"}`}>
+                              <input
+                                type="checkbox"
+                                checked={item.position === pos}
+                                disabled={disabled}
+                                onChange={() => {
+                                  if (!disabled) {
+                                    updateBoardSectionEditor(item.client_id, { position: pos });
+                                  }
+                                }}
+                              />
+                              <span>{label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-semibold text-slate-500 mb-1">노출 컨텐츠</div>
+                      <div className="flex gap-2">
+                        {(["recent", "best"] as const).map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            className={`flex-1 rounded-[5px] border px-3 py-1.5 text-sm ${item.content_mode === m ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--border)] bg-white"}`}
+                            onClick={() => updateBoardSectionEditor(item.client_id, { content_mode: m })}
+                          >
+                            {m === "recent" ? "최근컨텐츠" : "베스트컨텐츠"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        className="w-24 rounded-[5px] border border-[var(--border)] bg-white px-3 py-2 text-center text-sm"
+                        type="number"
+                        min={1}
+                        value={item.item_limit}
+                        onChange={(event) => updateBoardSectionEditor(item.client_id, { item_limit: Number(event.target.value) || 1 })}
+                      />
+                      <span className="text-sm text-[var(--ink)]">개 노출</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={item.is_active}
+                          onChange={(event) => updateBoardSectionEditor(item.client_id, { is_active: event.target.checked })}
+                        />
+                        활성 노출
+                      </label>
+                    </div>
+                  </div>
+                </article>
+              );
+            })
+          ) : (
+            <div className="rounded-[0.67rem] border border-dashed border-[var(--border)] bg-white px-6 py-10 text-center text-sm text-slate-500">
+              등록된 게시판 노출이 없습니다. `+ 게시판노출 추가`를 눌러 생성하세요.
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <button
+            type="button"
+            className="rounded-[5px] border border-[var(--border)] bg-white px-8 py-2 text-sm font-normal text-[var(--ink)]"
+            onClick={() => void handleSaveBoardSectionEditors()}
+          >
+            저장
+          </button>
+        </div>
       </section>
       ) : null}
 

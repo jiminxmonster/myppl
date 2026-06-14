@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import { getStoredTokens } from "@/lib/auth";
+import { clearStoredTokens, getStoredTokens, persistTokens } from "@/lib/auth";
 
 export function getApiBaseUrl() {
   const internalApiUrl = process.env.NEXT_INTERNAL_API_URL?.trim();
@@ -26,6 +26,82 @@ apiClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// 401 (토큰 만료) 시 자동으로 refresh 토큰으로 access 토큰을 갱신하고 재시도한다.
+// (히어로 섹션 저장 등 admin API 장시간 사용 시 필수)
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: unknown) => void;
+  reject: (reason?: unknown) => void;
+}> = [];
+
+const processQueue = (error: Error | null, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      const { refreshToken } = getStoredTokens();
+
+      if (!refreshToken) {
+        clearStoredTokens();
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        // 이미 refresh 중이면 대기열에 넣고 기다림
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return apiClient(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const response = await axios.post(
+          `${getApiBaseUrl()}/auth/token/refresh/`,
+          { refresh: refreshToken }
+        );
+
+        const { access: newAccessToken, refresh: newRefreshToken } = response.data;
+
+        persistTokens(newAccessToken, newRefreshToken || refreshToken);
+
+        // 대기 중이던 요청들 처리
+        processQueue(null, newAccessToken);
+
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError as Error, null);
+        clearStoredTokens();
+        // 필요시 로그인 페이지로 이동 (현재는 에러만 전달)
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export function extractApiError(error: unknown, fallbackMessage: string): Error {
   if (axios.isAxiosError(error)) {
@@ -177,7 +253,18 @@ export function resolveMediaUrl(path: string) {
     return path;
   }
 
-  return `${publicBackendOrigin}${path.startsWith("/") ? path : `/${path}`}`;
+  // Ensure media paths have /media/ prefix (handles raw storage names like "catalog/home-hero-slides/xx.png"
+  // or "/catalog/..." that sometimes come from DB/serializer in hero slides etc.)
+  let mediaPath = path;
+  if (!mediaPath.includes("/media/")) {
+    if (mediaPath.startsWith("/")) {
+      mediaPath = "/media" + mediaPath;
+    } else {
+      mediaPath = "/media/" + mediaPath;
+    }
+  }
+
+  return `${publicBackendOrigin}${mediaPath}`;
 }
 
 export function getProductPlaceholder(type: "hotdeal" | "marketplace", categoryName?: string | null) {
@@ -561,6 +648,21 @@ export type HomeProductSectionConfig = {
   is_active: boolean;
 };
 
+export type HomeBoardSectionConfig = {
+  id: number;
+  title: string;
+  board?: number | null;
+  board_name?: string | null;
+  board_slug?: string | null;
+  board_type?: string | null;
+  columns: 1 | 2 | 3;
+  position: "left" | "center" | "right";
+  content_mode: "best" | "recent";
+  item_limit: number;
+  sort_order: number;
+  is_active: boolean;
+};
+
 export type SiteDisplaySettings = {
   show_side_category_menu: boolean;
   updated_at: string;
@@ -748,6 +850,10 @@ export const authApi = {
   },
   async adminDashboard(): Promise<AdminDashboard> {
     const response = await apiClient.get("/auth/admin/dashboard/");
+    return response.data;
+  },
+  async exportBootstrapSpecs(): Promise<{ specs_code: string }> {
+    const response = await apiClient.get("/auth/admin/bootstrap-specs/");
     return response.data;
   },
   async adminMembers(query = ""): Promise<AdminMember[]> {
@@ -1120,6 +1226,35 @@ export async function updateAdminHomeProductSection(
 
 export async function deleteAdminHomeProductSection(sectionId: number) {
   return apiClient.delete(`/admin/catalog/home-sections/${sectionId}/`);
+}
+
+export async function getAdminHomeBoardSections(): Promise<HomeBoardSectionConfig[]> {
+  const response = await apiClient.get("/admin/catalog/board-sections/");
+  return Array.isArray(response.data) ? response.data : response.data.results ?? [];
+}
+
+export async function createAdminHomeBoardSection(
+  payload: Omit<HomeBoardSectionConfig, "id">
+): Promise<HomeBoardSectionConfig> {
+  const response = await apiClient.post("/admin/catalog/board-sections/", payload);
+  return response.data;
+}
+
+export async function updateAdminHomeBoardSection(
+  sectionId: number,
+  payload: Partial<Omit<HomeBoardSectionConfig, "id">>
+): Promise<HomeBoardSectionConfig> {
+  const response = await apiClient.patch(`/admin/catalog/board-sections/${sectionId}/`, payload);
+  return response.data;
+}
+
+export async function deleteAdminHomeBoardSection(sectionId: number) {
+  return apiClient.delete(`/admin/catalog/board-sections/${sectionId}/`);
+}
+
+export async function getHomeBoardSections(): Promise<HomeBoardSectionConfig[]> {
+  const response = await apiClient.get("/catalog/board-sections/");
+  return Array.isArray(response.data) ? response.data : response.data.results ?? [];
 }
 
 export async function createAdminCatalogProvider(payload: Omit<AdminExternalProvider, "id" | "last_synced_at">): Promise<AdminExternalProvider> {

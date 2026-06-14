@@ -189,6 +189,51 @@ class HomeProductSectionConfig(models.Model):
         return self.title
 
 
+class HomeBoardSectionConfig(models.Model):
+    """메인 화면 하단에 커뮤니티/일반 게시판 글을 노출하는 설정 (게시판노출)."""
+
+    COLUMNS_CHOICES = [
+        (1, "1열"),
+        (2, "2열"),
+        (3, "3열"),
+    ]
+    POSITION_CHOICES = [
+        ("left", "좌측"),
+        ("center", "중앙"),
+        ("right", "우측"),
+    ]
+    CONTENT_MODE_CHOICES = [
+        ("best", "베스트컨텐츠"),
+        ("recent", "최근컨텐츠"),
+    ]
+
+    title = models.CharField("섹션 제목", max_length=120)
+    board = models.ForeignKey(
+        "boards.Board",
+        verbose_name="연결 게시판",
+        related_name="home_board_sections",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+    columns = models.PositiveSmallIntegerField("노출 열 수", choices=COLUMNS_CHOICES, default=1)
+    position = models.CharField("위치", max_length=10, choices=POSITION_CHOICES, default="center")
+    content_mode = models.CharField("컨텐츠 유형", max_length=10, choices=CONTENT_MODE_CHOICES, default="recent")
+    item_limit = models.PositiveIntegerField("노출 개수", default=5)
+    sort_order = models.PositiveIntegerField("정렬 순서", default=0)
+    is_active = models.BooleanField("활성 여부", default=True)
+    created_at = models.DateTimeField("생성일", auto_now_add=True)
+    updated_at = models.DateTimeField("수정일", auto_now=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+        verbose_name = "홈 게시판 노출 설정"
+        verbose_name_plural = "홈 게시판 노출 설정"
+
+    def __str__(self) -> str:
+        return self.title
+
+
 class SiteDisplaySetting(models.Model):
     """사이트 화면 노출 설정."""
 

@@ -5,6 +5,7 @@ import { HomeProductSection } from "@/components/home/home-product-section";
 import {
   getHomeHeroSlides,
   getHomeProductSections,
+  getHomeBoardSections,
   getPopularSearchKeywords,
   getBoardPosts,
   getHotdeals,
@@ -12,6 +13,7 @@ import {
   getProductPlaceholder,
   resolveMediaUrl,
   type HomeProductSectionConfig,
+  type HomeBoardSectionConfig,
 } from "@/lib/api";
 import { formatKoreanDateTime, getProductLiveStatusLabel } from "@/lib/live-broadcast";
 import { inferShoppingMallName } from "@/lib/shopping-mall";
@@ -19,9 +21,10 @@ import { inferShoppingMallName } from "@/lib/shopping-mall";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [heroSlides, homeSections, hotdeals, marketplaceItems, popularSearchKeywords] = await Promise.all([
+  const [heroSlides, homeSections, boardSections, hotdeals, marketplaceItems, popularSearchKeywords] = await Promise.all([
     getHomeHeroSlides().catch(() => []),
     getHomeProductSections().catch(() => []),
+    getHomeBoardSections().catch(() => []),
     getHotdeals().catch(() => []),
     getMarketplaceItems().catch(() => []),
     getPopularSearchKeywords(40).catch(() => []),
@@ -237,6 +240,14 @@ export default async function HomePage() {
       };
     });
 
+  const activeBoardSections = (boardSections || []).filter((s) => s.is_active);
+  const boardSectionsForRender = await Promise.all(
+    activeBoardSections.slice(0, 6).map(async (sec) => ({
+      ...sec,
+      posts: sec.board_slug ? await getBoardPosts(sec.board_slug).catch(() => []) : [],
+    }))
+  );
+
   return (
     <section className="space-y-10">
       <HeroCarousel slides={activeHeroSlides} />
@@ -251,6 +262,38 @@ export default async function HomePage() {
           showWhenEmpty={section.source_type === "product_board"}
         />
       ))}
+
+      {/* 게시판노출 (Admin "게시판노출" 설정으로 제어) */}
+      {boardSectionsForRender.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {boardSectionsForRender.map((sec) => {
+            const spanClass = sec.columns === 3 ? "md:col-span-3" : sec.columns === 2 ? "md:col-span-2" : "";
+            const posClass = sec.position === "left" ? "justify-self-start" : sec.position === "right" ? "justify-self-end" : "justify-self-center";
+            return (
+              <div key={sec.id} className={`rounded-[0.67rem] border border-[var(--border)] bg-white p-5 shadow-soft ${spanClass} ${posClass}`}>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-[var(--ink)]">{sec.title}</h3>
+                  {sec.board_slug && (
+                    <Link href={`/boards/${sec.board_slug}`} className="text-xs font-semibold text-[var(--brand)]">더보기 →</Link>
+                  )}
+                </div>
+                <div className="mb-2 text-[10px] text-slate-500">
+                  {sec.content_mode === "best" ? "베스트컨텐츠" : "최근컨텐츠"} · {sec.columns}열 · {sec.position}
+                </div>
+                <div className="space-y-2 text-sm">
+                  {(sec.posts || []).slice(0, sec.item_limit).map((p: any) => (
+                    <Link key={p.id} href={`/boards/${sec.board_slug}/${p.id}`} className="block border-b border-[var(--border)] pb-1 last:border-b-0">
+                      <div className="font-medium text-[var(--ink)] line-clamp-1">{p.title}</div>
+                      <div className="text-xs text-slate-500">{p.author_nickname || ""} · 조회 {p.views || 0}</div>
+                    </Link>
+                  ))}
+                  {(!sec.posts || sec.posts.length === 0) && <p className="text-xs text-slate-400">아직 글이 없습니다.</p>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
     </section>
   );

@@ -24,6 +24,7 @@ from .models import (
     CategoryFilterOption,
     CategoryReferenceImage,
     HomeProductSectionConfig,
+    HomeBoardSectionConfig,
     HomeHeroSlide,
     SiteDisplaySetting,
     CategoryMapping,
@@ -40,6 +41,7 @@ from .serializers import (
     CategoryFilterOptionSerializer,
     CategoryReferenceImageSerializer,
     HomeProductSectionConfigSerializer,
+    HomeBoardSectionConfigSerializer,
     HomeHeroSlideSerializer,
     SiteDisplaySettingSerializer,
     CategoryMappingSerializer,
@@ -364,6 +366,32 @@ class AdminHomeProductSectionConfigDetailView(generics.RetrieveUpdateDestroyAPIV
     serializer_class = HomeProductSectionConfigSerializer
     permission_classes = [IsAdminOrModerator]
     queryset = HomeProductSectionConfig.objects.select_related("board").all().order_by("sort_order", "id")
+    lookup_url_kwarg = "section_id"
+
+
+class HomeBoardSectionConfigListView(generics.ListAPIView):
+    """공개용 활성 게시판노출 섹션 (메인 화면에서 사용)."""
+    serializer_class = HomeBoardSectionConfigSerializer
+    permission_classes = [permissions.AllowAny]
+    pagination_class = None
+
+    def get_queryset(self):
+        return HomeBoardSectionConfig.objects.select_related("board").filter(is_active=True).order_by("sort_order", "id")
+
+
+class AdminHomeBoardSectionConfigListCreateView(generics.ListCreateAPIView):
+    serializer_class = HomeBoardSectionConfigSerializer
+    permission_classes = [IsAdminOrModerator]
+    pagination_class = None
+
+    def get_queryset(self):
+        return HomeBoardSectionConfig.objects.select_related("board").all().order_by("sort_order", "id")
+
+
+class AdminHomeBoardSectionConfigDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = HomeBoardSectionConfigSerializer
+    permission_classes = [IsAdminOrModerator]
+    queryset = HomeBoardSectionConfig.objects.select_related("board").all().order_by("sort_order", "id")
     lookup_url_kwarg = "section_id"
 
 
