@@ -43,6 +43,21 @@ export default function WritePage({ params }: WritePageProps) {
       .then((item) => setBoard(item))
       .catch(() => setError("게시판을 찾을 수 없습니다."));
   }, [params.slug]);
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      ImageExt,
+      Placeholder.configure({
+        placeholder: "본문을 작성하세요. 상단 이미지 버튼으로 커서 위치에 사진을 삽입할 수 있습니다.",
+      }),
+    ],
+    content: content || "<p></p>",
+    onUpdate: ({ editor }) => {
+      setContent(editor.getHTML());
+    },
+  });
+
   const isProductBoard = board?.board_type === "product";
   const isLiveSpecialBoard = isProductBoard && board?.product_board_type === "live_special";
 
