@@ -4,10 +4,15 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { LiveBroadcastFields } from "@/components/board/live-broadcast-fields";
-import { ShoppingMallFields } from "@/components/board/shopping-mall-fields";
 import { PageNavigator } from "@/components/layout/page-navigator";
 import { getStoredTokens } from "@/lib/auth";
-import { BoardItem, createPost, getBoardDetail, ProductLiveStatus } from "@/lib/api";
+import { BoardItem, createPost, fetchLinkPreview, getBoardDetail, ProductLiveStatus, uploadInlineImage } from "@/lib/api";
+
+// Simple Tiptap rich editor for body image insert (WYSIWYG)
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import ImageExt from "@tiptap/extension-image";
+import Placeholder from "@tiptap/extension-placeholder";
 
 type WritePageProps = {
   params: { slug: string };
@@ -151,23 +156,39 @@ export default function WritePage({ params }: WritePageProps) {
           </div>
         ) : null}
         <label className="block space-y-2">
-          <span className="text-sm font-medium">본문</span>
-          <textarea
-            rows={14}
-            className="w-full rounded-[5px] border border-[var(--border)] px-4 py-4 outline-none"
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-          />
-        </label>
-        <label className="block space-y-2">
-          <span className="text-sm font-medium">이미지 첨부</span>
-          <input
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={(event) => setImages(event.target.files)}
-            className="block w-full rounded-[5px] border border-[var(--border)] px-4 py-3 text-sm"
-          />
+          <span className="text-sm font-medium">본문 (WYSIWYG - 이미지 삽입 지원)</span>
+          <div className="rounded-[5px] border border-[var(--border)] p-2 bg-white">
+            {editor && (
+              <>
+                <div className="flex gap-2 mb-2 border-b pb-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = "image/*";
+                      input.onchange = async (e: any) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const { url } = await uploadInlineImage(file);
+                          editor.chain().focus().setImage({ src: url }).run();
+                        } catch (err) {
+                          alert("이미지 업로드 실패");
+                        }
+                      };
+                      input.click();
+                    }}
+                    className="text-xs px-2 py-1 border rounded hover:bg-slate-100"
+                  >
+                    📷 본문에 이미지 삽입
+                  </button>
+                </div>
+                <EditorContent editor={editor} className="min-h-[180px] prose prose-sm max-w-none" />
+              </>
+            )}
+          </div>
+          <p className="text-[10px] text-slate-500">이미지 버튼으로 커서 위치에 이미지를 삽입하세요. 텍스트와 이미지 혼합 작성 가능.</p>
         </label>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <button

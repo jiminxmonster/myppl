@@ -44,6 +44,8 @@ urlpatterns = [
     path("posts/<int:post_id>/", PostDetailView.as_view(), name="post_detail"),
     path("posts/<int:post_id>/like/", PostLikeView.as_view(), name="post_like"),
     path("posts/<int:post_id>/comments/", CommentListCreateView.as_view(), name="comment_list_create"),
+    path("boards/link-preview/", LinkPreviewView.as_view(), name="link_preview"),
+    path("boards/upload-image/", InlineImageUploadView.as_view(), name="inline_image_upload"),
     path("comments/<int:comment_id>/", CommentDetailView.as_view(), name="comment_detail"),
     path("reports/", ReportCreateView.as_view(), name="report_create"),
 ]

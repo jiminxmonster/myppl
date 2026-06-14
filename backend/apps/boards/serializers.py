@@ -1,7 +1,29 @@
 from rest_framework import serializers
 
-from .models import Board, Comment, KeywordFilter, Post, PostImage, Report
+import bleach
+
+from .models import Board, Comment, KeywordFilter, Post, PostImage, PostMallLink, Report
 from .shopping_malls import infer_shopping_mall_name
+
+
+ALLOWED_TAGS = ["p", "br", "strong", "em", "u", "a", "ul", "ol", "li", "img", "h2", "h3", "blockquote", "code", "pre"]
+ALLOWED_ATTRS = {
+    "a": ["href", "title", "target", "rel"],
+    "img": ["src", "alt", "title", "width", "height"],
+}
+
+
+def sanitize_post_content(html: str) -> str:
+    """XSS 방지를 위한 간단 HTML sanitization."""
+    if not html:
+        return ""
+    cleaned = bleach.clean(
+        html,
+        tags=ALLOWED_TAGS,
+        attributes=ALLOWED_ATTRS,
+        strip=True,
+    )
+    return cleaned
 
 
 class BoardSerializer(serializers.ModelSerializer):
@@ -37,6 +59,24 @@ class PostImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = PostImage
         fields = ("id", "image", "created_at")
+
+
+class PostMallLinkSerializer(serializers.ModelSerializer):
+    """쇼핑몰 상품 링크 응답/입력 직렬화기."""
+
+    class Meta:
+        model = PostMallLink
+        fields = (
+            "id",
+            "mall_name",
+            "product_name",
+            "product_url",
+            "image_url",
+            "original_price",
+            "current_price",
+            "discount_rate",
+            "sort_order",
+        )
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -86,6 +126,7 @@ class PostListSerializer(serializers.ModelSerializer):
     title = serializers.SerializerMethodField()
     author_nickname = serializers.CharField(source="author.nickname", read_only=True)
     comment_count = serializers.SerializerMethodField()
+    mall_links = PostMallLinkSerializer(many=True, read_only=True)
     thumbnail_image = serializers.SerializerMethodField()
     board_id = serializers.IntegerField(source="board.id", read_only=True)
     board_name = serializers.CharField(source="board.name", read_only=True)
@@ -157,6 +198,8 @@ class PostDetailSerializer(serializers.ModelSerializer):
     author_nickname = serializers.CharField(source="author.nickname", read_only=True)
     board_type = serializers.CharField(source="board.board_type", read_only=True)
     board_product_board_type = serializers.CharField(source="board.product_board_type", read_only=True)
+    mall_links = PostMallLinkSerializer(many=True, read_only=True)
+    images = PostImageSerializer(many=True, read_only=True)
     images = PostImageSerializer(many=True, read_only=True)
     comments = serializers.SerializerMethodField()
 
@@ -237,7 +280,9 @@ class PostWriteSerializer(serializers.ModelSerializer):
             "product_live_button_label",
             "images",
             "remove_image_ids",
+            "mall_links",
         )
+    mall_links = PostMallLinkSerializer(many=True, required=False)
 
     def to_internal_value(self, data):
         mutable_data = data.copy()
@@ -251,23 +296,29 @@ class PostWriteSerializer(serializers.ModelSerializer):
         for field in ("product_live_starts_at", "product_live_ends_at"):
             if mutable_data.get(field) == "":
                 mutable_data[field] = None
+        if "content" in mutable_data:
+            mutable_data["content"] = sanitize_post_content(str(mutable_data.get("content") or ""))
         return super().to_internal_value(mutable_data)
 
     def create(self, validated_data):
         """게시글 생성과 함께 첨부 이미지를 저장한다."""
         images = validated_data.pop("images", [])
         validated_data.pop("remove_image_ids", None)
+        mall_links = validated_data.pop("mall_links", []) or []
         if not validated_data.get("product_store_name"):
             validated_data["product_store_name"] = infer_shopping_mall_name(validated_data.get("product_live_url"))
         post = Post.objects.create(**validated_data)
         for image in images:
             PostImage.objects.create(post=post, image=image)
+        for idx, link_data in enumerate(mall_links):
+            PostMallLink.objects.create(post=post, sort_order=idx, **{k: v for k, v in link_data.items() if k != "id"})
         return post
 
     def update(self, instance, validated_data):
-        """게시글 본문을 수정하고 새 이미지가 오면 추가 저장한다."""
+        """게시글 본문을 수정하고 새 이미지가 오면 추가 저장한다. mall_links는 전체 교체."""
         images = validated_data.pop("images", [])
         remove_image_ids = validated_data.pop("remove_image_ids", [])
+        mall_links = validated_data.pop("mall_links", None)
         instance.title = validated_data.get("title", instance.title)
         instance.content = validated_data.get("content", instance.content)
         instance.product_original_price = validated_data.get("product_original_price", instance.product_original_price)
@@ -288,6 +339,10 @@ class PostWriteSerializer(serializers.ModelSerializer):
             instance.images.filter(id__in=remove_image_ids).delete()
         for image in images:
             PostImage.objects.create(post=instance, image=image)
+        if mall_links is not None:
+            instance.mall_links.all().delete()
+            for idx, link_data in enumerate(mall_links):
+                PostMallLink.objects.create(post=instance, sort_order=idx, **{k: v for k, v in link_data.items() if k != "id"})
         return instance
 
 

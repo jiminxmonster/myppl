@@ -8,6 +8,12 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import IsAdminOnly, IsAdminOrModerator
+
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin, urlparse
+import re
+from decimal import Decimal, InvalidOperation
 from apps.admin_logs.models import AdminLog
 from apps.admin_logs.services import create_admin_log
 from apps.notifications.models import Notification
@@ -467,3 +473,141 @@ class AdminKeywordFilterDetailView(generics.RetrieveUpdateDestroyAPIView):
             detail={"keyword": keyword, "deleted": True},
             ip_address=self.request.META.get("REMOTE_ADDR"),
         )
+
+
+# --- Link preview (for buyer hot issues mall link auto fill) ---
+
+def _parse_price(text: str):
+    if not text:
+        return None
+    text = re.sub(r"[^\d.]", "", text)
+    try:
+        return Decimal(text)
+    except (InvalidOperation, ValueError):
+        return None
+
+
+def fetch_link_preview_data(url: str) -> dict:
+    """OG / JSON-LD / meta 기반 상품 정보 추출. 실패해도 partial 반환."""
+    result = {
+        "success": False,
+        "url": url,
+        "mall_name": "",
+        "product_name": "",
+        "image_url": "",
+        "original_price": None,
+        "current_price": None,
+        "discount_rate": None,
+        "message": "",
+    }
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; MYPPLBot/1.0)"}
+        resp = requests.get(url, headers=headers, timeout=8, allow_redirects=True)
+        if resp.status_code != 200:
+            result["message"] = "페이지를 가져올 수 없습니다."
+            return result
+        html = resp.text
+        soup = BeautifulSoup(html, "lxml")
+
+        # title / og
+        og_title = soup.find("meta", property="og:title")
+        if og_title and og_title.get("content"):
+            result["product_name"] = og_title["content"].strip()[:200]
+
+        og_image = soup.find("meta", property="og:image")
+        if og_image and og_image.get("content"):
+            img = og_image["content"]
+            result["image_url"] = urljoin(url, img)
+
+        # json-ld Product
+        for script in soup.find_all("script", type="application/ld+json"):
+            try:
+                data = json.loads(script.string or "{}")
+                if isinstance(data, list):
+                    data = data[0] if data else {}
+                if data.get("@type") in ("Product", "product"):
+                    if not result["product_name"]:
+                        result["product_name"] = data.get("name", "")[:200]
+                    offers = data.get("offers") or {}
+                    if isinstance(offers, list):
+                        offers = offers[0] if offers else {}
+                    if offers.get("price"):
+                        result["current_price"] = _parse_price(str(offers.get("price")))
+                    if offers.get("highPrice") or offers.get("originalPrice"):
+                        result["original_price"] = _parse_price(str(offers.get("highPrice") or offers.get("originalPrice")))
+                    if not result["image_url"] and data.get("image"):
+                        img = data["image"]
+                        if isinstance(img, list):
+                            img = img[0]
+                        if isinstance(img, dict):
+                            img = img.get("url", "")
+                        result["image_url"] = urljoin(url, str(img))
+            except Exception:
+                continue
+
+        # meta price
+        for meta in soup.find_all("meta"):
+            name = (meta.get("property") or meta.get("name") or "").lower()
+            if "price" in name and not result["current_price"]:
+                result["current_price"] = _parse_price(meta.get("content", ""))
+
+        # mall name from domain or og:site_name
+        site = soup.find("meta", property="og:site_name")
+        if site and site.get("content"):
+            result["mall_name"] = site["content"].strip()[:80]
+        else:
+            parsed = urlparse(url)
+            result["mall_name"] = parsed.netloc.replace("www.", "")[:80]
+
+        if result["product_name"] or result["current_price"]:
+            result["success"] = True
+        else:
+            result["message"] = "상품 정보를 충분히 찾지 못했습니다. (수동 입력 권장)"
+    except requests.RequestException as e:
+        result["message"] = f"네트워크 오류: {str(e)[:80]}"
+    except Exception as e:
+        result["message"] = "자동 인식 중 오류가 발생했습니다."
+    return result
+
+
+class LinkPreviewView(APIView):
+    """쇼핑몰 상품 링크 미리보기 (구매자공유핫이슈 글쓰기 보조)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        url = (request.data.get("url") or "").strip()
+        if not url or not url.startswith(("http://", "https://")):
+            return response.Response({"success": False, "message": "올바른 http/https URL을 입력하세요."}, status=400)
+        # SSRF 기본 방지 (private ip 대략)
+        parsed = urlparse(url)
+        if parsed.hostname in ("localhost", "127.0.0.1") or parsed.hostname.startswith("192.168.") or parsed.hostname.startswith("10."):
+            return response.Response({"success": False, "message": "내부 주소는 허용되지 않습니다."}, status=400)
+        data = fetch_link_preview_data(url)
+        return response.Response(data, status=status.HTTP_200_OK)
+
+
+class InlineImageUploadView(APIView):
+    """에디터 본문 이미지 업로드 (URL 반환)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        f = request.FILES.get("image") or request.FILES.get("file")
+        if not f:
+            return response.Response({"detail": "image file is required"}, status=400)
+        content_type = f.content_type or ""
+        if content_type not in ("image/jpeg", "image/png", "image/webp"):
+            return response.Response({"detail": "jpg, png, webp 이미지만 허용됩니다."}, status=400)
+        if f.size > 8 * 1024 * 1024:
+            return response.Response({"detail": "이미지 크기는 8MB 이하여야 합니다."}, status=400)
+        import uuid
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        ext = (f.name or "img").split(".")[-1].lower()[:5]
+        name = f"posts/inline/{uuid.uuid4().hex[:10]}.{ext}"
+        saved = default_storage.save(name, ContentFile(f.read()))
+        # media url (resolveMediaUrl will handle)
+        url = default_storage.url(saved)
+        return response.Response({"url": url, "success": True}, status=200)

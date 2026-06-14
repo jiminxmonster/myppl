@@ -194,6 +194,28 @@ class PostImage(models.Model):
     created_at = models.DateTimeField("생성일", auto_now_add=True)
 
 
+class PostMallLink(models.Model):
+    """게시글에 첨부된 쇼핑몰 상품 링크 (구매자공유핫이슈 등에서 사용)."""
+
+    post = models.ForeignKey(Post, related_name="mall_links", on_delete=models.CASCADE)
+    mall_name = models.CharField("쇼핑몰명", max_length=80, blank=True)
+    product_name = models.CharField("상품명", max_length=200, blank=True)
+    product_url = models.URLField("상품 URL", max_length=500)
+    image_url = models.URLField("대표 이미지 URL", max_length=500, blank=True)
+    original_price = models.DecimalField("원래가격", max_digits=12, decimal_places=0, null=True, blank=True)
+    current_price = models.DecimalField("현재가격", max_digits=12, decimal_places=0, null=True, blank=True)
+    discount_rate = models.PositiveSmallIntegerField("할인율(%)", null=True, blank=True)
+    sort_order = models.PositiveIntegerField("정렬 순서", default=0)
+    created_at = models.DateTimeField("생성일", auto_now_add=True)
+    updated_at = models.DateTimeField("수정일", auto_now=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+
+    def __str__(self) -> str:
+        return f"{self.mall_name or ''} - {self.product_name or self.product_url}"
+
+
 class PostLike(models.Model):
     """중복 추천 방지를 위한 게시글 추천 이력."""
 
