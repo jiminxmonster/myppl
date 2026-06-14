@@ -297,14 +297,27 @@ export default async function HomePage() {
                 <div className="mb-2 text-[10px] text-slate-500">
                   {sec.content_mode === "best" ? "베스트컨텐츠" : "최근컨텐츠"} · {sec.columns}열 · {sec.position}
                 </div>
-                <div className="space-y-2 text-sm">
+                {/* columns 값에 따라 내부 포스트를 1/2/3열 그리드로 배치 */}
+                <div className={`grid gap-2 text-sm ${
+                  sec.columns === 3 
+                    ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3' 
+                    : sec.columns === 2 
+                    ? 'grid-cols-1 md:grid-cols-2' 
+                    : 'grid-cols-1'
+                }`}>
                   {(sec.posts || []).slice(0, sec.item_limit).map((p: any) => (
-                    <Link key={p.id} href={`/boards/${sec.board_slug}/${p.id}`} className="block border-b border-[var(--border)] pb-1 last:border-b-0">
-                      <div className="font-medium text-[var(--ink)] line-clamp-1">{p.title}</div>
-                      <div className="text-xs text-slate-500">{p.author_nickname || ""} · 조회 {p.views || 0}</div>
+                    <Link 
+                      key={p.id} 
+                      href={`/boards/${sec.board_slug}/${p.id}`} 
+                      className="block rounded border border-[var(--border)] p-3 hover:bg-[var(--muted)] transition"
+                    >
+                      <div className="font-medium text-[var(--ink)] line-clamp-2 leading-tight">{p.title}</div>
+                      <div className="mt-1 text-[10px] text-slate-500">
+                        {p.author_nickname || ""} · 조회 {p.views || 0}
+                      </div>
                     </Link>
                   ))}
-                  {(!sec.posts || sec.posts.length === 0) && <p className="text-xs text-slate-400">아직 글이 없습니다.</p>}
+                  {(!sec.posts || sec.posts.length === 0) && <p className="text-xs text-slate-400 col-span-full">아직 글이 없습니다.</p>}
                 </div>
               </div>
             );
