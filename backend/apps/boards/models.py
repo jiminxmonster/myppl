@@ -163,6 +163,13 @@ class Post(models.Model):
     )
     product_live_benefit = models.CharField("라이브 방송 혜택 문구", max_length=200, blank=True)
     product_live_button_label = models.CharField("라이브 방송 버튼 문구", max_length=40, default="라이브 보기", blank=True)
+    main_ranking_image = models.ImageField(
+        "메인 순위 노출용 이미지",
+        upload_to="posts/ranking/",
+        null=True,
+        blank=True,
+        help_text="홈 상품 순위(상품순위노출)에서 사용되는 대표 이미지. 미지정 시 첫 첨부/본문 이미지를 사용합니다.",
+    )
     views = models.PositiveIntegerField("조회수", default=0)
     likes = models.PositiveIntegerField("추천수", default=0)
     is_notice = models.BooleanField("공지 여부", default=False)

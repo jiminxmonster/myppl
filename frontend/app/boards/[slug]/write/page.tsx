@@ -36,6 +36,7 @@ export default function WritePage({ params }: WritePageProps) {
   const [loading, setLoading] = useState(false);
   const [inlineImageUploading, setInlineImageUploading] = useState(false);
   const [isInlineDropActive, setIsInlineDropActive] = useState(false);
+  const [mainRankingImage, setMainRankingImage] = useState<File | null>(null);
 
   useEffect(() => {
     void getBoardDetail(params.slug)
@@ -145,14 +146,13 @@ export default function WritePage({ params }: WritePageProps) {
     }
   }
 
-  // Live preview renderer: parses only markdown images safely and renders real <img> + text.
-  // No dangerouslySetInnerHTML for arbitrary HTML.
+  // 작성 중 본문 미리보기: markdown 이미지 패턴을 실제 이미지로 렌더 (경로만 보이는 문제 해결)
+  // textarea에는 markdown 유지, 여기서는 visual preview
   function renderBodyPreview(text: string) {
     const imagePattern = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
     const nodes: React.ReactNode[] = [];
     let lastIndex = 0;
     let match: RegExpExecArray | null;
-
     while ((match = imagePattern.exec(text)) !== null) {
       const [raw, alt, src] = match;
       if (match.index > lastIndex) {
@@ -162,18 +162,17 @@ export default function WritePage({ params }: WritePageProps) {
           </span>
         );
       }
-      const resolved = resolveMediaUrl(src);
+      const resolvedSrc = resolveMediaUrl(src);
       nodes.push(
         <img
           key={`img-${match.index}`}
-          src={resolved}
+          src={resolvedSrc}
           alt={alt || "본문 이미지"}
-          className="my-2 max-h-[400px] w-full rounded border border-[var(--border)] object-contain"
+          className="my-2 max-h-[300px] w-auto rounded border border-[var(--border)] object-contain"
         />
       );
       lastIndex = match.index + raw.length;
     }
-
     if (lastIndex < text.length) {
       nodes.push(
         <span key={`text-${lastIndex}`} className="whitespace-pre-wrap">
@@ -181,12 +180,19 @@ export default function WritePage({ params }: WritePageProps) {
         </span>
       );
     }
-
-    return nodes.length > 0 ? nodes : <span className="text-slate-400 text-sm">본문 미리보기가 여기에 표시됩니다.</span>;
+    return nodes.length ? nodes : <span className="text-xs text-slate-400">이미지 삽입 시 여기에 미리보기가 표시됩니다.</span>;
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!title.trim()) {
+      setError("제목을 입력해주세요.");
+      return;
+    }
+    if (!content.trim()) {
+      setError("본문을 입력해주세요.");
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -204,6 +210,7 @@ export default function WritePage({ params }: WritePageProps) {
         title,
         content,
         images,
+        main_ranking_image: isProductBoard ? mainRankingImage : null,
         product_original_price: isProductBoard ? productOriginalPrice : "",
         product_sale_price: isProductBoard ? productSalePrice : "",
         product_live_url: isProductBoard ? productLiveUrl.trim() : "",
@@ -242,6 +249,7 @@ export default function WritePage({ params }: WritePageProps) {
             className="w-full rounded-[5px] border border-[var(--border)] px-4 py-3 outline-none"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
+            required
           />
         </label>
         {isProductBoard ? (
@@ -274,6 +282,21 @@ export default function WritePage({ params }: WritePageProps) {
                 onChange={(event) => setProductSalePrice(event.target.value)}
               />
             </label>
+            {isProductBoard && (
+              <label className="block space-y-2 md:col-span-2">
+                <span className="text-sm font-medium">메인 순위 노출용 이미지 (홈 상품 카드에 표시)</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setMainRankingImage(e.target.files?.[0] || null)}
+                  className="block w-full text-sm file:mr-4 file:rounded file:border file:bg-white file:px-3 file:py-1"
+                />
+                {mainRankingImage && (
+                  <span className="text-xs text-emerald-600">선택됨: {mainRankingImage.name} — 등록 시 메인 썸네일로 사용</span>
+                )}
+                <span className="text-[10px] text-slate-400">미지정 시 첫 번째 이미지 사용</span>
+              </label>
+            )}
             {isLiveSpecialBoard ? (
               <LiveBroadcastFields
                 platform={productLivePlatform}
@@ -330,17 +353,22 @@ export default function WritePage({ params }: WritePageProps) {
             onDrop={handleTextareaDrop}
             onPaste={handleTextareaPaste}
             placeholder="본문 작성... 버튼으로 이미지를 올리거나, 이 창에 이미지를 끌어다 놓거나, 클립보드 이미지를 붙여넣을 수 있습니다."
+            required
           />
         </label>
 
-        {/* 본문 미리보기: content의 markdown 이미지 패턴을 실제 <img>로 안전 렌더링.
-            텍스트는 줄바꿈 유지. 업로드 즉시 표시되지만, "게시글 등록" 전까지는 게시물이 공개되지 않음. */}
-        <div className="space-y-1">
-          <div className="text-xs font-medium text-slate-500">본문 미리보기</div>
-          <div className="min-h-[80px] rounded-[5px] border border-[var(--border)] bg-white p-3 text-sm">
+        {/* 작성 중 실시간 본문 미리보기: markdown 이미지 경로만 보이는 UX 문제 해결.
+            content 변경 즉시 markdown 이미지 패턴을 실제 <img>로 파싱/렌더 (resolveMediaUrl 사용).
+            dangerouslySetInnerHTML 미사용, 안전한 노드 렌더. */}
+        <div className="space-y-1 rounded-[5px] border border-[var(--border)] bg-white p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">본문 미리보기 (실제 표시 모습)</span>
+            <span className="text-[10px] text-slate-400">이미지 삽입 즉시 업데이트됨</span>
+          </div>
+          <div className="min-h-[60px] text-sm leading-relaxed">
             {renderBodyPreview(content)}
           </div>
-          <p className="text-[10px] text-slate-400">이미지 업로드 후 여기에서 즉시 확인하세요. 최종 등록 버튼을 눌러야 게시글이 저장·공개됩니다.</p>
+          <p className="text-[10px] text-slate-400">업로드/드래그/붙여넣기 후 여기서 이미지가 보입니다. "게시글 등록" 전에는 공개되지 않습니다.</p>
         </div>
 
         {error ? <p className="text-sm text-red-600">{error}</p> : null}

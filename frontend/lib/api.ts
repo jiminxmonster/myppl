@@ -252,8 +252,12 @@ export function resolveMediaUrl(path: string) {
     }
     try {
       const mediaUrl = new URL(path);
-      if ((mediaUrl.hostname === "localhost" || mediaUrl.hostname === "127.0.0.1") && mediaUrl.pathname.startsWith("/media/")) {
-        return `${publicBackendOrigin}${mediaUrl.pathname}${mediaUrl.search}`;
+      if ((mediaUrl.hostname === "localhost" || mediaUrl.hostname === "127.0.0.1" || mediaUrl.hostname === "34.22.96.236") && mediaUrl.pathname.startsWith("/media/")) {
+        // Force correct port for VM (8080 via nginx) or local
+        const correctOrigin = mediaUrl.hostname === "34.22.96.236"
+          ? "http://34.22.96.236:8080"
+          : publicBackendOrigin;
+        return `${correctOrigin}${mediaUrl.pathname}${mediaUrl.search}`;
       }
     } catch {
       return path;
@@ -1268,9 +1272,7 @@ export async function getHomeBoardSections(): Promise<HomeBoardSectionConfig[]> 
 export async function uploadInlineImage(file: File): Promise<{ url: string; success?: boolean }> {
   const form = new FormData();
   form.append("image", file);
-  const response = await apiClient.post("/boards/upload-image/", form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const response = await apiClient.post("/boards/upload-image/", form);
   return response.data;
 }
 
@@ -1594,6 +1596,7 @@ export async function createPost(
     product_live_status?: ProductLiveStatus | "";
     product_live_benefit?: string;
     product_live_button_label?: string;
+    main_ranking_image?: File | null;
   }
 ) {
   const { accessToken } = getStoredTokens();
@@ -1611,6 +1614,9 @@ export async function createPost(
   formData.append("product_live_status", payload.product_live_status ?? "");
   formData.append("product_live_benefit", payload.product_live_benefit ?? "");
   formData.append("product_live_button_label", payload.product_live_button_label ?? "");
+  if (payload.main_ranking_image) {
+    formData.append("main_ranking_image", payload.main_ranking_image);
+  }
 
   Array.from(payload.images ?? []).forEach((image) => {
     formData.append("images", image);

@@ -188,7 +188,12 @@ class PostListSerializer(serializers.ModelSerializer):
         return obj.title
 
     def get_thumbnail_image(self, obj):
-        """첫 번째 첨부 이미지를 목록용 썸네일로 사용한다."""
+        """메인 순위 이미지가 있으면 우선 사용, 없으면 첫 번째 첨부 이미지를 목록용 썸네일로 사용한다."""
+        if getattr(obj, "main_ranking_image", None):
+            try:
+                return obj.main_ranking_image.url
+            except Exception:
+                pass
         first_image = obj.images.first()
         return first_image.image.url if first_image else None
 
@@ -282,8 +287,10 @@ class PostWriteSerializer(serializers.ModelSerializer):
             "images",
             "remove_image_ids",
             "mall_links",
+            "main_ranking_image",
         )
     mall_links = PostMallLinkSerializer(many=True, required=False)
+    main_ranking_image = serializers.ImageField(required=False, write_only=True)
 
     def to_internal_value(self, data):
         mutable_data = data.copy()
@@ -302,24 +309,40 @@ class PostWriteSerializer(serializers.ModelSerializer):
         return super().to_internal_value(mutable_data)
 
     def create(self, validated_data):
-        """게시글 생성과 함께 첨부 이미지를 저장한다."""
+        """게시글 생성과 함께 첨부 이미지를 저장한다. 본문 inline 이미지와 main_ranking_image도 게시물에 연결."""
         images = validated_data.pop("images", [])
         validated_data.pop("remove_image_ids", None)
         mall_links = validated_data.pop("mall_links", []) or []
+        main_ranking_image = validated_data.pop("main_ranking_image", None)
         if not validated_data.get("product_store_name"):
             validated_data["product_store_name"] = infer_shopping_mall_name(validated_data.get("product_live_url"))
         post = Post.objects.create(**validated_data)
         for image in images:
             PostImage.objects.create(post=post, image=image)
+        if main_ranking_image:
+            post.main_ranking_image = main_ranking_image
+            post.save()
+        # 본문에 포함된 inline 이미지(URL)도 Post.images에 연결하여 thumbnail/ranking에서 사용 가능하게 함
+        if post.content:
+            import re
+            from django.core.files.storage import default_storage
+            matches = re.findall(r'!\[[^\]]*\]\((/media/posts/inline/[^)]+)\)', post.content or "")
+            for url in matches:
+                rel_path = url.replace("/media/", "")
+                if default_storage.exists(rel_path):
+                    pi = PostImage(post=post)
+                    pi.image.name = rel_path
+                    pi.save()
         for idx, link_data in enumerate(mall_links):
             PostMallLink.objects.create(post=post, sort_order=idx, **{k: v for k, v in link_data.items() if k != "id"})
         return post
 
     def update(self, instance, validated_data):
-        """게시글 본문을 수정하고 새 이미지가 오면 추가 저장한다. mall_links는 전체 교체."""
+        """게시글 본문을 수정하고 새 이미지가 오면 추가 저장한다. mall_links는 전체 교체. main_ranking_image와 본문 inline 이미지도 연결."""
         images = validated_data.pop("images", [])
         remove_image_ids = validated_data.pop("remove_image_ids", [])
         mall_links = validated_data.pop("mall_links", None)
+        main_ranking_image = validated_data.pop("main_ranking_image", None)
         instance.title = validated_data.get("title", instance.title)
         instance.content = validated_data.get("content", instance.content)
         instance.product_original_price = validated_data.get("product_original_price", instance.product_original_price)
@@ -335,11 +358,29 @@ class PostWriteSerializer(serializers.ModelSerializer):
         instance.product_live_status = validated_data.get("product_live_status", instance.product_live_status)
         instance.product_live_benefit = validated_data.get("product_live_benefit", instance.product_live_benefit)
         instance.product_live_button_label = validated_data.get("product_live_button_label", instance.product_live_button_label)
+        if main_ranking_image:
+            instance.main_ranking_image = main_ranking_image
         instance.save()
         if remove_image_ids:
             instance.images.filter(id__in=remove_image_ids).delete()
         for image in images:
             PostImage.objects.create(post=instance, image=image)
+        if main_ranking_image:
+            # 이미 set and saved above
+            pass
+        # 본문 inline 이미지 연결 (content 변경 시 재연결)
+        if "content" in validated_data or main_ranking_image:
+            instance.images.filter(image__startswith="posts/inline/").delete()  # 기존 inline 재설정
+            if instance.content:
+                import re
+                from django.core.files.storage import default_storage
+                matches = re.findall(r'!\[[^\]]*\]\((/media/posts/inline/[^)]+)\)', instance.content or "")
+                for url in matches:
+                    rel_path = url.replace("/media/", "")
+                    if default_storage.exists(rel_path):
+                        pi = PostImage(post=instance)
+                        pi.image.name = rel_path
+                        pi.save()
         if mall_links is not None:
             instance.mall_links.all().delete()
             for idx, link_data in enumerate(mall_links):
