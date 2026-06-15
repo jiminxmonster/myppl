@@ -250,6 +250,14 @@ export function resolveMediaUrl(path: string) {
     if (path.startsWith(internalBackendOrigin)) {
       return `${publicBackendOrigin}${path.slice(internalBackendOrigin.length)}`;
     }
+    try {
+      const mediaUrl = new URL(path);
+      if ((mediaUrl.hostname === "localhost" || mediaUrl.hostname === "127.0.0.1") && mediaUrl.pathname.startsWith("/media/")) {
+        return `${publicBackendOrigin}${mediaUrl.pathname}${mediaUrl.search}`;
+      }
+    } catch {
+      return path;
+    }
     return path;
   }
 
@@ -1257,6 +1265,15 @@ export async function getHomeBoardSections(): Promise<HomeBoardSectionConfig[]> 
   return Array.isArray(response.data) ? response.data : response.data.results ?? [];
 }
 
+export async function uploadInlineImage(file: File): Promise<{ url: string; success?: boolean }> {
+  const form = new FormData();
+  form.append("image", file);
+  const response = await apiClient.post("/boards/upload-image/", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+}
+
 export async function createAdminCatalogProvider(payload: Omit<AdminExternalProvider, "id" | "last_synced_at">): Promise<AdminExternalProvider> {
   const response = await apiClient.post("/admin/catalog/providers/", payload);
   return response.data;
@@ -1607,6 +1624,13 @@ export async function createPost(
   } catch (error) {
     throw extractApiError(error, "게시글 저장에 실패했습니다.");
   }
+}
+
+export async function uploadInlinePostImage(image: File): Promise<{ url: string; success: boolean }> {
+  const formData = new FormData();
+  formData.append("image", image);
+  const response = await apiClient.post("/boards/upload-image/", formData);
+  return response.data;
 }
 
 export async function updatePost(

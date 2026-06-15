@@ -1,12 +1,13 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { LiveBroadcastFields } from "@/components/board/live-broadcast-fields";
+import { ShoppingMallFields } from "@/components/board/shopping-mall-fields";
 import { PageNavigator } from "@/components/layout/page-navigator";
 import { getStoredTokens } from "@/lib/auth";
-import { BoardItem, createPost, getBoardDetail, ProductLiveStatus } from "@/lib/api";
+import { BoardItem, createPost, getBoardDetail, ProductLiveStatus, resolveMediaUrl, uploadInlineImage } from "@/lib/api";
 
 type WritePageProps = {
   params: { slug: string };
@@ -14,6 +15,8 @@ type WritePageProps = {
 
 export default function WritePage({ params }: WritePageProps) {
   const router = useRouter();
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const inlineImageInputRef = useRef<HTMLInputElement | null>(null);
   const [board, setBoard] = useState<BoardItem | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -31,6 +34,7 @@ export default function WritePage({ params }: WritePageProps) {
   const [images, setImages] = useState<FileList | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [inlineImageUploading, setInlineImageUploading] = useState(false);
 
   useEffect(() => {
     void getBoardDetail(params.slug)
@@ -40,6 +44,52 @@ export default function WritePage({ params }: WritePageProps) {
 
   const isProductBoard = board?.board_type === "product";
   const isLiveSpecialBoard = isProductBoard && board?.product_board_type === "live_special";
+
+  function insertContentAtCursor(markup: string) {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setContent((current) => `${current}${current ? "\n" : ""}${markup}\n`);
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = content.slice(0, start);
+    const after = content.slice(end);
+    const prefix = before && !before.endsWith("\n") ? "\n" : "";
+    const suffix = after && !after.startsWith("\n") ? "\n" : "";
+    const nextContent = `${before}${prefix}${markup}${suffix}${after}`;
+    setContent(nextContent);
+    window.requestAnimationFrame(() => {
+      const nextCursor = start + prefix.length + markup.length + suffix.length;
+      textarea.focus();
+      textarea.setSelectionRange(nextCursor, nextCursor);
+    });
+  }
+
+  async function handleInlineImageSelect(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+    if (!file) return;
+
+    const { accessToken } = getStoredTokens();
+    if (!accessToken) {
+      setError("로그인 후 본문 이미지를 업로드할 수 있습니다.");
+      router.push("/login");
+      return;
+    }
+
+    setInlineImageUploading(true);
+    setError("");
+    try {
+      const uploaded = await uploadInlineImage(file);
+      const imageUrl = resolveMediaUrl(uploaded.url);
+      insertContentAtCursor(`![본문 이미지](${imageUrl})`);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "본문 이미지 업로드에 실패했습니다.");
+    } finally {
+      setInlineImageUploading(false);
+    }
+  }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -152,29 +202,31 @@ export default function WritePage({ params }: WritePageProps) {
         ) : null}
         <label className="block space-y-2">
           <span className="text-sm font-medium">본문 (이미지 본문 삽입 지원)</span>
-          <div className="flex gap-2 mb-1">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <input
+              ref={inlineImageInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(event) => void handleInlineImageUpload(event)}
+            />
             <button
               type="button"
-              onClick={() => {
-                // 데모용: 실제 업로드는 /boards/upload-image/ 로 POST 후 URL 받아 삽입
-                // 여기서는 picsum placeholder로 본문에 <img> 태그를 삽입 (상세보기에서 HTML 렌더링)
-                const url = `https://picsum.photos/seed/${Date.now()}/600/400`;
-                const imgTag = `<img src="${url}" alt="본문 이미지" style="max-width:100%;height:auto;border-radius:4px;" />`;
-                setContent((prev) => (prev || "") + "\n" + imgTag + "\n");
-                alert("이미지 태그가 본문에 추가되었습니다. (실제 파일 업로드는 추후 연결)");
-              }}
-              className="text-xs px-3 py-1 border rounded hover:bg-[var(--muted)]"
+              disabled={inlineImageUploading}
+              onClick={() => inlineImageInputRef.current?.click()}
+              className="rounded-[5px] border border-[var(--border)] px-3 py-2 text-xs font-semibold hover:bg-[var(--muted)] disabled:opacity-60"
             >
-              📷 본문에 이미지 삽입 (데모)
+              {inlineImageUploading ? "이미지 업로드 중..." : "본문 이미지 삽입"}
             </button>
-            <span className="text-[10px] text-slate-500 self-center">버튼 클릭 시 이미지 태그가 content에 들어갑니다. 상세에서 &lt;img&gt; 로 표시됩니다.</span>
+            <span className="self-center text-[10px] text-slate-500">JPG, PNG, WEBP / 8MB 이하. 커서 위치에 이미지가 삽입됩니다.</span>
           </div>
           <textarea
+            ref={textareaRef}
             rows={14}
             className="w-full rounded-[5px] border border-[var(--border)] px-4 py-4 outline-none font-mono text-sm"
             value={content}
             onChange={(event) => setContent(event.target.value)}
-            placeholder="본문 작성... 이미지 삽입 버튼으로 <img> 태그를 넣으세요. (HTML 태그 지원)"
+            placeholder="본문 작성... 본문 이미지 삽입 버튼으로 이미지를 넣을 수 있습니다."
           />
         </label>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}

@@ -58,6 +58,11 @@ function normalizeHeroHref(rawHref: string): { normalized: string; error: string
 }
 
 function toHeroSlideEditorItem(slide: HomeHeroSlide): HeroSlideEditorItem {
+  const imageSource = slide.image_url || slide.image_path || slide.image || "";
+  // For existing slides, pre-resolve the preview URL using current public origin
+  // so admin cards show the image even before new file selection.
+  // Priority matches task: image_url > image_path > image (already in source selection).
+  const previewUrl = imageSource ? resolveMediaUrl(imageSource) : null;
   return {
     client_id: `hero-${slide.id}`,
     id: slide.id,
@@ -69,9 +74,9 @@ function toHeroSlideEditorItem(slide: HomeHeroSlide): HeroSlideEditorItem {
     transition_style: (slide.transition_style || "next") as HeroTransitionStyle,
     sort_order: slide.sort_order,
     is_active: slide.is_active,
-    image: slide.image_url || slide.image || "",
+    image: imageSource,
     image_file: null,
-    image_preview_url: null,
+    image_preview_url: previewUrl,
   };
 }
 
