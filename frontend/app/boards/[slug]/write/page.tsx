@@ -146,43 +146,6 @@ export default function WritePage({ params }: WritePageProps) {
     }
   }
 
-  // 작성 중 본문 미리보기: markdown 이미지 패턴을 실제 이미지로 렌더 (경로만 보이는 문제 해결)
-  // textarea에는 markdown 유지, 여기서는 visual preview
-  function renderBodyPreview(text: string) {
-    const imagePattern = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
-    const nodes: React.ReactNode[] = [];
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = imagePattern.exec(text)) !== null) {
-      const [raw, alt, src] = match;
-      if (match.index > lastIndex) {
-        nodes.push(
-          <span key={`text-${lastIndex}`} className="whitespace-pre-wrap">
-            {text.slice(lastIndex, match.index)}
-          </span>
-        );
-      }
-      const resolvedSrc = resolveMediaUrl(src);
-      nodes.push(
-        <img
-          key={`img-${match.index}`}
-          src={resolvedSrc}
-          alt={alt || "본문 이미지"}
-          className="my-2 max-h-[300px] w-auto rounded border border-[var(--border)] object-contain"
-        />
-      );
-      lastIndex = match.index + raw.length;
-    }
-    if (lastIndex < text.length) {
-      nodes.push(
-        <span key={`text-${lastIndex}`} className="whitespace-pre-wrap">
-          {text.slice(lastIndex)}
-        </span>
-      );
-    }
-    return nodes.length ? nodes : <span className="text-xs text-slate-400">이미지 삽입 시 여기에 미리보기가 표시됩니다.</span>;
-  }
-
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!title.trim()) {
@@ -356,20 +319,6 @@ export default function WritePage({ params }: WritePageProps) {
             required
           />
         </label>
-
-        {/* 작성 중 실시간 본문 미리보기: markdown 이미지 경로만 보이는 UX 문제 해결.
-            content 변경 즉시 markdown 이미지 패턴을 실제 <img>로 파싱/렌더 (resolveMediaUrl 사용).
-            dangerouslySetInnerHTML 미사용, 안전한 노드 렌더. */}
-        <div className="space-y-1 rounded-[5px] border border-[var(--border)] bg-white p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">본문 미리보기 (실제 표시 모습)</span>
-            <span className="text-[10px] text-slate-400">이미지 삽입 즉시 업데이트됨</span>
-          </div>
-          <div className="min-h-[60px] text-sm leading-relaxed">
-            {renderBodyPreview(content)}
-          </div>
-          <p className="text-[10px] text-slate-400">업로드/드래그/붙여넣기 후 여기서 이미지가 보입니다. "게시글 등록" 전에는 공개되지 않습니다.</p>
-        </div>
 
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <button
