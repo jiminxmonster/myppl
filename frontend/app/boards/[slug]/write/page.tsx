@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
+import React, { ChangeEvent, ClipboardEvent, DragEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { LiveBroadcastFields } from "@/components/board/live-broadcast-fields";
@@ -35,6 +35,7 @@ export default function WritePage({ params }: WritePageProps) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [inlineImageUploading, setInlineImageUploading] = useState(false);
+  const [isInlineDropActive, setIsInlineDropActive] = useState(false);
 
   useEffect(() => {
     void getBoardDetail(params.slug)
@@ -53,24 +54,28 @@ export default function WritePage({ params }: WritePageProps) {
     }
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const before = content.slice(0, start);
-    const after = content.slice(end);
-    const prefix = before && !before.endsWith("\n") ? "\n" : "";
-    const suffix = after && !after.startsWith("\n") ? "\n" : "";
-    const nextContent = `${before}${prefix}${markup}${suffix}${after}`;
-    setContent(nextContent);
+    let nextCursor = start + markup.length;
+    setContent((current) => {
+      const before = current.slice(0, start);
+      const after = current.slice(end);
+      const prefix = before && !before.endsWith("\n") ? "\n" : "";
+      const suffix = after && !after.startsWith("\n") ? "\n" : "";
+      nextCursor = start + prefix.length + markup.length + suffix.length;
+      return `${before}${prefix}${markup}${suffix}${after}`;
+    });
     window.requestAnimationFrame(() => {
-      const nextCursor = start + prefix.length + markup.length + suffix.length;
       textarea.focus();
       textarea.setSelectionRange(nextCursor, nextCursor);
     });
   }
 
   async function handleInlineImageSelect(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0] ?? null;
+    const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith("image/"));
     event.target.value = "";
-    if (!file) return;
-    await uploadAndInsertImage(file);
+    if (files.length === 0) return;
+    for (const file of files) {
+      await uploadAndInsertImage(file);
+    }
   }
 
   async function uploadAndInsertImage(file: File) {
@@ -94,34 +99,90 @@ export default function WritePage({ params }: WritePageProps) {
     }
   }
 
-  function handleTextareaDragOver(e: React.DragEvent<HTMLTextAreaElement>) {
-    e.preventDefault();
-    e.stopPropagation();
+  function getImageFiles(files: FileList | File[]) {
+    return Array.from(files).filter((file) => ["image/jpeg", "image/png", "image/webp"].includes(file.type));
   }
 
-  async function handleTextareaDrop(e: React.DragEvent<HTMLTextAreaElement>) {
-    e.preventDefault();
-    e.stopPropagation();
-    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
+  function handleTextareaDragOver(event: DragEvent<HTMLTextAreaElement>) {
+    if (Array.from(event.dataTransfer.items).some((item) => item.kind === "file" && item.type.startsWith("image/"))) {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsInlineDropActive(true);
+    }
+  }
+
+  function handleTextareaDragLeave(event: DragEvent<HTMLTextAreaElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsInlineDropActive(false);
+  }
+
+  async function handleTextareaDrop(event: DragEvent<HTMLTextAreaElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsInlineDropActive(false);
+    const files = getImageFiles(event.dataTransfer.files);
     if (files.length === 0) return;
     for (const file of files) {
       await uploadAndInsertImage(file);
     }
   }
 
-  async function handleTextareaPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
-    const items = e.clipboardData?.items;
+  async function handleTextareaPaste(event: ClipboardEvent<HTMLTextAreaElement>) {
+    const items = event.clipboardData?.items;
     if (!items) return;
-    let imageFile: File | null = null;
+    const imageFiles: File[] = [];
     for (let i = 0; i < items.length; i++) {
-      if (items[i].type.startsWith("image/")) {
-        imageFile = items[i].getAsFile();
-        break;
+      if (["image/jpeg", "image/png", "image/webp"].includes(items[i].type)) {
+        const imageFile = items[i].getAsFile();
+        if (imageFile) imageFiles.push(imageFile);
       }
     }
-    if (!imageFile) return;
-    e.preventDefault();
-    await uploadAndInsertImage(imageFile);
+    if (imageFiles.length === 0) return;
+    event.preventDefault();
+    for (const file of imageFiles) {
+      await uploadAndInsertImage(file);
+    }
+  }
+
+  // Live preview renderer: parses only markdown images safely and renders real <img> + text.
+  // No dangerouslySetInnerHTML for arbitrary HTML.
+  function renderBodyPreview(text: string) {
+    const imagePattern = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
+    const nodes: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = imagePattern.exec(text)) !== null) {
+      const [raw, alt, src] = match;
+      if (match.index > lastIndex) {
+        nodes.push(
+          <span key={`text-${lastIndex}`} className="whitespace-pre-wrap">
+            {text.slice(lastIndex, match.index)}
+          </span>
+        );
+      }
+      const resolved = resolveMediaUrl(src);
+      nodes.push(
+        <img
+          key={`img-${match.index}`}
+          src={resolved}
+          alt={alt || "본문 이미지"}
+          className="my-2 max-h-[400px] w-full rounded border border-[var(--border)] object-contain"
+        />
+      );
+      lastIndex = match.index + raw.length;
+    }
+
+    if (lastIndex < text.length) {
+      nodes.push(
+        <span key={`text-${lastIndex}`} className="whitespace-pre-wrap">
+          {text.slice(lastIndex)}
+        </span>
+      );
+    }
+
+    return nodes.length > 0 ? nodes : <span className="text-slate-400 text-sm">본문 미리보기가 여기에 표시됩니다.</span>;
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -240,6 +301,7 @@ export default function WritePage({ params }: WritePageProps) {
               ref={inlineImageInputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp"
+              multiple
               className="hidden"
               onChange={(event) => void handleInlineImageSelect(event)}
             />
@@ -256,15 +318,31 @@ export default function WritePage({ params }: WritePageProps) {
           <textarea
             ref={textareaRef}
             rows={14}
-            className="w-full rounded-[5px] border border-[var(--border)] px-4 py-4 outline-none font-mono text-sm"
+            className={`w-full rounded-[5px] border px-4 py-4 font-mono text-sm outline-none transition ${
+              isInlineDropActive
+                ? "border-[var(--brand)] bg-emerald-50 ring-2 ring-[var(--brand)]/20"
+                : "border-[var(--border)]"
+            }`}
             value={content}
             onChange={(event) => setContent(event.target.value)}
             onDragOver={handleTextareaDragOver}
+            onDragLeave={handleTextareaDragLeave}
             onDrop={handleTextareaDrop}
             onPaste={handleTextareaPaste}
-            placeholder="본문 작성... 본문 이미지 삽입 버튼 / 드래그&드롭 / 붙여넣기 지원"
+            placeholder="본문 작성... 버튼으로 이미지를 올리거나, 이 창에 이미지를 끌어다 놓거나, 클립보드 이미지를 붙여넣을 수 있습니다."
           />
         </label>
+
+        {/* 본문 미리보기: content의 markdown 이미지 패턴을 실제 <img>로 안전 렌더링.
+            텍스트는 줄바꿈 유지. 업로드 즉시 표시되지만, "게시글 등록" 전까지는 게시물이 공개되지 않음. */}
+        <div className="space-y-1">
+          <div className="text-xs font-medium text-slate-500">본문 미리보기</div>
+          <div className="min-h-[80px] rounded-[5px] border border-[var(--border)] bg-white p-3 text-sm">
+            {renderBodyPreview(content)}
+          </div>
+          <p className="text-[10px] text-slate-400">이미지 업로드 후 여기에서 즉시 확인하세요. 최종 등록 버튼을 눌러야 게시글이 저장·공개됩니다.</p>
+        </div>
+
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <button
           type="submit"
