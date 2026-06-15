@@ -159,6 +159,7 @@ class PostListSerializer(serializers.ModelSerializer):
             "product_live_status",
             "product_live_benefit",
             "product_live_button_label",
+            "mall_links",
             "is_deleted",
             "is_blinded",
             "is_notice",
@@ -200,7 +201,6 @@ class PostDetailSerializer(serializers.ModelSerializer):
     board_product_board_type = serializers.CharField(source="board.product_board_type", read_only=True)
     mall_links = PostMallLinkSerializer(many=True, read_only=True)
     images = PostImageSerializer(many=True, read_only=True)
-    images = PostImageSerializer(many=True, read_only=True)
     comments = serializers.SerializerMethodField()
 
     class Meta:
@@ -232,6 +232,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
             "notice_start",
             "notice_end",
             "notice_order",
+            "mall_links",
             "images",
             "comments",
             "created_at",

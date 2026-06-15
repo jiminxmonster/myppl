@@ -16,6 +16,8 @@ from .views import (
     BoardListView,
     CommentDetailView,
     CommentListCreateView,
+    InlineImageUploadView,
+    LinkPreviewView,
     PostDetailView,
     PostLikeView,
     PostListCreateView,
@@ -24,6 +26,8 @@ from .views import (
 
 urlpatterns = [
     path("boards/", BoardListView.as_view(), name="board_list"),
+    path("boards/link-preview/", LinkPreviewView.as_view(), name="link_preview"),
+    path("boards/upload-image/", InlineImageUploadView.as_view(), name="inline_image_upload"),
     path("boards/<str:slug>/", BoardDetailView.as_view(), name="board_detail"),
     path("admin/boards/", AdminBoardListCreateView.as_view(), name="admin_board_list_create"),
     path("admin/boards/reorder/", AdminBoardReorderView.as_view(), name="admin_board_reorder"),
@@ -44,8 +48,6 @@ urlpatterns = [
     path("posts/<int:post_id>/", PostDetailView.as_view(), name="post_detail"),
     path("posts/<int:post_id>/like/", PostLikeView.as_view(), name="post_like"),
     path("posts/<int:post_id>/comments/", CommentListCreateView.as_view(), name="comment_list_create"),
-    path("boards/link-preview/", LinkPreviewView.as_view(), name="link_preview"),
-    path("boards/upload-image/", InlineImageUploadView.as_view(), name="inline_image_upload"),
     path("comments/<int:comment_id>/", CommentDetailView.as_view(), name="comment_detail"),
     path("reports/", ReportCreateView.as_view(), name="report_create"),
 ]

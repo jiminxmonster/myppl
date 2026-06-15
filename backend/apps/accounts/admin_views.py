@@ -1,5 +1,7 @@
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
+from django.core.management import call_command
+from io import StringIO
 from rest_framework import generics, response, status
 from rest_framework.views import APIView
 
@@ -264,5 +266,21 @@ class AdminLogListView(generics.ListAPIView):
                 }
                 for log in logs
             ],
+            status=status.HTTP_200_OK,
+        )
+
+
+class BootstrapSpecsExportView(APIView):
+    """현재 admin 상태(게시판 상위노출, 홈 섹션 등)를 부트스트랩 스펙 코드로 내보내는 API.
+    admin에서 '현재 상태를 영구 기본값으로 만들기' 버튼용.
+    """
+
+    permission_classes = [IsAdminOnly]
+
+    def get(self, request, *args, **kwargs):
+        out = StringIO()
+        call_command("dump_bootstrap_specs", stdout=out)
+        return response.Response(
+            {"specs_code": out.getvalue()},
             status=status.HTTP_200_OK,
         )

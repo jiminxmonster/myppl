@@ -1,5 +1,6 @@
 "use client";
 
+import type React from "react";
 import { useEffect, useState } from "react";
 
 import { getPostDetail, PostDetail, resolveMediaUrl } from "@/lib/api";
@@ -15,6 +16,52 @@ type PostDetailViewProps = {
   postId: string;
   initialPost: PostDetail;
 };
+
+function renderPostContent(content: string) {
+  const imagePattern = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = imagePattern.exec(content)) !== null) {
+    const [raw, alt, src] = match;
+    if (match.index > lastIndex) {
+      nodes.push(
+        <span key={`text-${lastIndex}`} className="whitespace-pre-wrap">
+          {content.slice(lastIndex, match.index)}
+        </span>
+      );
+    }
+
+    nodes.push(
+      <a
+        key={`image-${match.index}`}
+        href={resolveMediaUrl(src)}
+        target="_blank"
+        rel="noreferrer"
+        className="my-5 block overflow-hidden rounded-[0.5rem] border border-[var(--border)] bg-[var(--muted)] p-2"
+      >
+        <img
+          src={resolveMediaUrl(src)}
+          alt={alt || "본문 이미지"}
+          className="max-h-[720px] w-full object-contain"
+        />
+      </a>
+    );
+
+    lastIndex = match.index + raw.length;
+  }
+
+  if (lastIndex < content.length) {
+    nodes.push(
+      <span key={`text-${lastIndex}`} className="whitespace-pre-wrap">
+        {content.slice(lastIndex)}
+      </span>
+    );
+  }
+
+  return nodes;
+}
 
 export function PostDetailView({ slug, postId, initialPost }: PostDetailViewProps) {
   const [post, setPost] = useState(initialPost);
@@ -131,7 +178,7 @@ export function PostDetailView({ slug, postId, initialPost }: PostDetailViewProp
             </aside>
           </div>
         ) : null}
-        <div className="mt-8 whitespace-pre-wrap text-base leading-8 text-slate-800">{post.content}</div>
+        <div className="mt-8 text-base leading-8 text-slate-800">{renderPostContent(post.content)}</div>
         {galleryImages.length > 0 ? (
           <div className="mt-8 grid gap-4 md:grid-cols-2">
             {galleryImages.map((image) => (

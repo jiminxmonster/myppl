@@ -70,7 +70,10 @@ export default function WritePage({ params }: WritePageProps) {
     const file = event.target.files?.[0] ?? null;
     event.target.value = "";
     if (!file) return;
+    await uploadAndInsertImage(file);
+  }
 
+  async function uploadAndInsertImage(file: File) {
     const { accessToken } = getStoredTokens();
     if (!accessToken) {
       setError("로그인 후 본문 이미지를 업로드할 수 있습니다.");
@@ -89,6 +92,36 @@ export default function WritePage({ params }: WritePageProps) {
     } finally {
       setInlineImageUploading(false);
     }
+  }
+
+  function handleTextareaDragOver(e: React.DragEvent<HTMLTextAreaElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  async function handleTextareaDrop(e: React.DragEvent<HTMLTextAreaElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
+    if (files.length === 0) return;
+    for (const file of files) {
+      await uploadAndInsertImage(file);
+    }
+  }
+
+  async function handleTextareaPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    let imageFile: File | null = null;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith("image/")) {
+        imageFile = items[i].getAsFile();
+        break;
+      }
+    }
+    if (!imageFile) return;
+    e.preventDefault();
+    await uploadAndInsertImage(imageFile);
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -208,7 +241,7 @@ export default function WritePage({ params }: WritePageProps) {
               type="file"
               accept="image/jpeg,image/png,image/webp"
               className="hidden"
-              onChange={(event) => void handleInlineImageUpload(event)}
+              onChange={(event) => void handleInlineImageSelect(event)}
             />
             <button
               type="button"
@@ -226,7 +259,10 @@ export default function WritePage({ params }: WritePageProps) {
             className="w-full rounded-[5px] border border-[var(--border)] px-4 py-4 outline-none font-mono text-sm"
             value={content}
             onChange={(event) => setContent(event.target.value)}
-            placeholder="본문 작성... 본문 이미지 삽입 버튼으로 이미지를 넣을 수 있습니다."
+            onDragOver={handleTextareaDragOver}
+            onDrop={handleTextareaDrop}
+            onPaste={handleTextareaPaste}
+            placeholder="본문 작성... 본문 이미지 삽입 버튼 / 드래그&드롭 / 붙여넣기 지원"
           />
         </label>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}

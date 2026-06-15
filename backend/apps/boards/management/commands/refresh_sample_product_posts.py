@@ -1,5 +1,6 @@
 from urllib.error import URLError
 from urllib.request import Request, urlopen
+import random
 
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
@@ -297,6 +298,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--skip-images", action="store_true", help="이미지 교체 없이 텍스트/순위 데이터만 갱신합니다.")
+        parser.add_argument("--fill-missing-images", action="store_true", help="이미지가 없는 상품형 게시글(샘플 외 일반 게시물 포함)에 임의의 상품 이미지 채우기")
 
     def handle(self, *args, **options):
         updated_count = 0
@@ -341,6 +343,9 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(f"샘플 게시글 {updated_count}개 갱신, 이미지 {image_count}개 교체 완료"))
 
+        if options["fill_missing_images"]:
+            self._fill_missing_images()
+
     def _replace_image(self, post: Post, image_url: str, board_slug: str, rank: int) -> bool:
         image_bytes = self._download_image(image_url)
         if image_bytes is None:
@@ -366,3 +371,34 @@ class Command(BaseCommand):
         except (TimeoutError, URLError, OSError) as exc:
             self.stdout.write(self.style.WARNING(f"이미지 다운로드 실패: {image_url} ({exc})"))
             return None
+
+    def _fill_missing_images(self):
+        """이미지가 없는 상품형 게시글에 임의의 Unsplash 상품 이미지를 채웁니다."""
+        product_boards = Board.objects.filter(
+            product_board_type__in=[Board.PRODUCT_BOARD_STANDARD, Board.PRODUCT_BOARD_LIVE_SPECIAL]
+        )
+        # 다양한 상품 느낌의 Unsplash photo_id 풀 (임의 선택)
+        photo_pool = [
+            "1558618666-fcd25c85cd64", "1495474472287-4d71bcdd2085", "1619566636858-adf3ef46400b",
+            "1505693416388-ac5ce068fe85", "1556228453-efd6c1ff04f6", "1526947425960-945c6e72858f",
+            "1565026057447-bc90a3dceb87", "1523275335684-37898b6baf30", "1512820790803-83ca734da794",
+            "1601758125946-6ec2ef64daf8", "1556911220-bff31c812dba", "1496181133206-80ce9b88a853",
+            "1606220945770-b5b6c2c55bf1", "1517336714731-489689fd1ca8", "1445205170230-053b83016050",
+            "1556911220-bff31c812dba", "1526947425960-945c6e72858f", "1517836357463-d25dfeac3438",
+            "1504280390367-361c6d9f38f4", "1505693416388-ac5ce068fe85", "1576675784432-994941412b3d",
+            "1516035069371-29a1b244cc32", "1587829741301-dc798b83add3", "1503376780353-7e6692767b70",
+            "1558618666-fcd25c85cd64", "1495474472287-4d71bcdd2085", "1606220945770-b5b6c2c55bf1",
+        ]
+        filled = 0
+        for board in product_boards:
+            posts_without = Post.objects.filter(board=board).exclude(images__isnull=False).distinct()
+            for post in posts_without:
+                photo_id = random.choice(photo_pool)
+                image_url = unsplash(photo_id)
+                image_bytes = self._download_image(image_url)
+                if image_bytes:
+                    image = PostImage(post=post)
+                    image.image.save(f"{board.slug}-arbitrary-{post.pk}.jpg", ContentFile(image_bytes), save=True)
+                    filled += 1
+                    self.stdout.write(f"이미지 임의 채움: {board.slug} / {post.title[:30]}...")
+        self.stdout.write(self.style.SUCCESS(f"이미지 없는 게시물 {filled}개에 임의 상품 이미지 채움 완료"))

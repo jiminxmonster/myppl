@@ -12,6 +12,7 @@ from .admin_views import (
     AdminMemberPointsView,
     AdminMemberSuspendView,
     AdminOperatorRoleView,
+    BootstrapSpecsExportView,
 )
 from .views import LoginView, LogoutView, MeView, MyPageSummaryView, RegisterView
 
@@ -32,4 +33,5 @@ urlpatterns = [
     path("admin/ip-ban/", AdminIPBanListCreateView.as_view(), name="admin_ip_ban_list_create"),
     path("admin/ip-ban/<int:ban_id>/", AdminIPBanDetailView.as_view(), name="admin_ip_ban_detail"),
     path("admin/logs/", AdminLogListView.as_view(), name="admin_log_list"),
+    path("admin/bootstrap-specs/", BootstrapSpecsExportView.as_view(), name="admin_bootstrap_specs"),
 ]

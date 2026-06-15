@@ -108,6 +108,8 @@ _dev_origins = [
     "http://127.0.0.1:3100",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
+    # Explicit current cloud frontend for temp service CORS (ensures ACAO is emitted)
+    "https://myppl-frontend-temp-bexuss3nja-du.a.run.app",
 ]
 CORS_ALLOWED_ORIGINS = list(dict.fromkeys([*_cors_from_env, *_dev_origins]))  # 순서 유지 + 중복 제거
 CORS_ALLOW_CREDENTIALS = True
@@ -116,6 +118,15 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*-temp.*\.run\.app$",
 ]
+
+# 이미지 업로드(HomeHeroSlide 등) 413 Payload Too Large 방지
+# nginx client_max_body_size 와 함께 설정 (기본 2.5MB → 20MB)
+DATA_UPLOAD_MAX_MEMORY_SIZE = config("DATA_UPLOAD_MAX_MEMORY_SIZE", default=20 * 1024 * 1024, cast=int)
+FILE_UPLOAD_MAX_MEMORY_SIZE = config("FILE_UPLOAD_MAX_MEMORY_SIZE", default=20 * 1024 * 1024, cast=int)
+
+# 개발/작업 기간 토큰. base.py 변경 후 backend 재시작 필요.
+# 운영 전에는 보안 기준에 맞춰 더 짧게 재조정한다.
+ACCESS_TOKEN_LIFETIME_DAYS = config("ACCESS_TOKEN_LIFETIME_DAYS", default=90, cast=int)
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -129,8 +140,10 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    # 개발 기간 동안 잦은 401을 피하기 위해 90일 기본값을 사용한다.
+    # 운영 배포 전에는 보안 기준에 맞춰 더 짧은 값으로 조정할 것.
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=ACCESS_TOKEN_LIFETIME_DAYS),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=ACCESS_TOKEN_LIFETIME_DAYS),
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
@@ -176,7 +189,7 @@ AWS_S3_FILE_OVERWRITE = False
 GS_BUCKET_NAME = config("GS_BUCKET_NAME", default="")
 GS_PROJECT_ID = config("GS_PROJECT_ID", default="")
 GS_LOCATION = config("GS_LOCATION", default="")
-GS_DEFAULT_ACL = "publicRead"  # 히어로 섹션 이미지 등 공개 미디어의 GCS 경로를 admin에서 직접 탐색(브라우저로 열기) 가능하게 함
+GS_DEFAULT_ACL = config("GS_DEFAULT_ACL", default=None)
 GS_QUERYSTRING_AUTH = config("GS_QUERYSTRING_AUTH", default=False, cast=bool)
 GS_FILE_OVERWRITE = config("GS_FILE_OVERWRITE", default=False, cast=bool)
 GS_CUSTOM_ENDPOINT = config("GS_CUSTOM_ENDPOINT", default="")
@@ -201,7 +214,7 @@ if USE_GCS_STORAGE and GS_BUCKET_NAME:
             "OPTIONS": {
                 "bucket_name": GS_BUCKET_NAME,
                 "project_id": GS_PROJECT_ID or None,
-                "location": GS_LOCATION or None,
+                "location": GS_LOCATION,
                 "default_acl": GS_DEFAULT_ACL,
                 "querystring_auth": GS_QUERYSTRING_AUTH,
                 "file_overwrite": GS_FILE_OVERWRITE,

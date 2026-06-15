@@ -5,15 +5,39 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from apps.boards.models import Board, Comment, Post
-from apps.catalog.models import CategoryFilter, CategoryFilterOption, ExternalProvider, HomeProductSectionConfig, ProductCategory
+from apps.catalog.models import CategoryFilter, CategoryFilterOption, ExternalProvider, HomeHeroSlide, HomeProductSectionConfig, ProductCategory
 from apps.hotdeals.models import Hotdeal, HotdealCategory
 from apps.marketplace.models import MarketplaceCategory, MarketplaceItem
 
 
 class Command(BaseCommand):
-    """초기 게시판/관리자/샘플 데이터를 생성한다."""
+    """최초 설치용 bootstrap (빈 DB에서만 동작).
 
-    help = "커뮤니티 기본 게시판, 관리자 계정, 샘플 데이터를 생성합니다."
+    ============================================================
+    MYPPL 운영 철학
+    - GitHub = 코드 원본
+    - PostgreSQL = 데이터 원본 (회원, 게시글, 상품, 카테고리, Hero, 메뉴, 운영 설정 등)
+    - Admin panel = 운영 원본
+
+    bootstrap_community 는 **최초 설치 / 빈 DB / 재해복구** 용도로만 사용한다.
+    운영 중인 DB의 어떤 데이터도 UPDATE / 덮어쓰지 않는다.
+    (Admin에서 변경한 메뉴, Hero, Section, 카테고리 등은 절대 건드리지 않음)
+
+    유지하는 최소 기능:
+    - 최초 superadmin 생성
+    - 테스트용 기본 계정 (buy/sell) 생성 (비밀번호는 생성 시에만)
+    - 필수 기본 게시판 생성 (빈 테이블일 때만)
+    - 기본 카테고리/필터 (빈 테이블일 때만)
+    - 선택적 샘플 데이터 (--with-sample-data)
+
+    제거된 기능:
+    - 모든 운영 설정 강제 동기화 (board_specs, hero, home sections, categories...)
+    - 기존 계정 비밀번호/권한 강제 변경
+    - bless / dump 의존성 (런타임용 아님)
+    ============================================================
+    """
+
+    help = "최초 설치용 bootstrap (운영 DB 절대 덮어쓰지 않음)"
 
     def add_arguments(self, parser):
         """관리자 계정과 샘플 데이터 옵션을 받는다."""
@@ -34,16 +58,26 @@ class Command(BaseCommand):
         self._ensure_product_catalog(user=user)
         self._ensure_external_providers()
         self._ensure_home_product_sections(boards=boards)
+        self._ensure_hero_slides()
         self._ensure_hotdeal_categories()
         self._ensure_marketplace_categories()
 
         if options["with_sample_data"]:
             self._ensure_sample_content(user=user, boards=boards)
 
+        # Test 계정 비밀번호 보장 (myppl-backend-temp 로그인용)
+        # admin / buy / sell 은 문서화된 테스트 계정. 존재 여부와 관계없이 항상 알려진 비번으로 맞춰준다.
+        # (다른 사용자 비번이나 운영 데이터는 절대 건드리지 않음)
+        self._ensure_test_account_passwords()
+
         self.stdout.write(self.style.SUCCESS("커뮤니티 부트스트랩이 완료되었습니다."))
 
     def _ensure_admin_user(self, *, username: str, email: str, password: str):
-        """운영자 권한의 기본 관리자를 생성한다."""
+        """최초 관리자 계정 생성 (설치용).
+
+        운영 중인 DB에서는 비밀번호/권한을 절대 덮어쓰지 않는다.
+        Admin panel에서 관리자가 직접 관리한다.
+        """
         user_model = get_user_model()
         user, created = user_model.objects.get_or_create(
             username=username,
@@ -62,30 +96,23 @@ class Command(BaseCommand):
             user.save()
             self.stdout.write(self.style.SUCCESS(f"관리자 계정을 생성했습니다: {username}"))
         else:
-            update_fields = []
-            if not user.check_password(password):
-                user.set_password(password)
-                update_fields.append("password")
-            if user.operator_role != user_model.OPERATOR_SUPERADMIN:
-                user.operator_role = user_model.OPERATOR_SUPERADMIN
-                update_fields.append("operator_role")
-            if not user.is_staff:
-                user.is_staff = True
-                update_fields.append("is_staff")
-            if not user.is_superuser:
-                user.is_superuser = True
-                update_fields.append("is_superuser")
-            if update_fields:
-                if "password" in update_fields:
-                    user.save()
-                else:
-                    user.save(update_fields=update_fields)
-            self.stdout.write(self.style.WARNING(f"관리자 계정이 이미 존재합니다: {username}"))
+            self.stdout.write(self.style.WARNING(f"관리자 계정이 이미 존재합니다 (비밀번호/권한 유지): {username}"))
 
         return user
 
     def _ensure_boards(self):
-        """문서 기준의 기본 게시판을 생성한다."""
+        """필수 게시판 최초 생성 (설치용, 빈 DB에서만).
+
+        운영 데이터(메뉴 노출, 정렬, 카테고리 등)는 Admin panel이 원본.
+        bootstrap은 절대 기존 운영 게시판을 건드리지 않는다.
+        """
+        if Board.objects.exists():
+            self.stdout.write(
+                self.style.WARNING("[게시판] 운영 데이터 존재 → bootstrap boards 스킵 (Admin panel 원본 유지)")
+            )
+            return {b.slug: b for b in Board.objects.all()}
+
+        # 최초 설치 시에만 생성하는 최소 필수 게시판
         board_specs = [
             {
                 "slug": "buyer-community",
@@ -115,24 +142,6 @@ class Command(BaseCommand):
                 "audience": Board.AUDIENCE_ALL,
             },
             {
-                "slug": "hotdeal-board",
-                "name": "핫딜 게시판",
-                "board_type": Board.BOARD_HOTDEAL,
-                "description": "핫딜 정보와 가격 비교를 공유하는 게시판입니다.",
-                "is_visible": False,
-                "show_in_top_menu": False,
-                "audience": Board.AUDIENCE_ALL,
-            },
-            {
-                "slug": "market-board",
-                "name": "중고장터 게시판",
-                "board_type": Board.BOARD_MARKETPLACE,
-                "description": "개인 간 거래와 후기를 공유하는 게시판입니다.",
-                "is_visible": False,
-                "show_in_top_menu": False,
-                "audience": Board.AUDIENCE_ALL,
-            },
-            {
                 "slug": "free",
                 "name": "자유게시판",
                 "board_type": Board.BOARD_GENERAL,
@@ -141,66 +150,16 @@ class Command(BaseCommand):
                 "show_in_top_menu": False,
                 "audience": Board.AUDIENCE_ALL,
             },
-            {
-                "slug": "live-special",
-                "name": "라이브특가",
-                "board_type": Board.BOARD_PRODUCT,
-                "product_board_type": Board.PRODUCT_BOARD_LIVE_SPECIAL,
-                "description": "타사 라이브 방송 링크를 연결해 노출하는 라이브특가 그리드형 게시판입니다.",
-                "is_visible": True,
-                "show_in_top_menu": False,
-                "audience": Board.AUDIENCE_ALL,
-                "sort_order": 10,
-            },
-            {
-                "slug": "seller-hot-issues",
-                "name": "판매자공유핫이슈",
-                "board_type": Board.BOARD_PRODUCT,
-                "product_board_type": Board.PRODUCT_BOARD_STANDARD,
-                "description": "판매자 공유 핫이슈 상품을 그리드로 모아 보여주는 게시판입니다.",
-                "is_visible": True,
-                "show_in_top_menu": True,
-                "audience": Board.AUDIENCE_ALL,
-                "sort_order": 11,
-            },
-            {
-                "slug": "community-grid",
-                "name": "소비자공유핫이슈",
-                "board_type": Board.BOARD_PRODUCT,
-                "product_board_type": Board.PRODUCT_BOARD_STANDARD,
-                "description": "커뮤니티 상품형 게시물을 그리드로 모아 보여주는 게시판입니다.",
-                "is_visible": True,
-                "show_in_top_menu": True,
-                "audience": Board.AUDIENCE_ALL,
-                "sort_order": 12,
-            },
         ]
 
         boards = {}
-        for board_spec in board_specs:
-            board, created = Board.objects.get_or_create(slug=board_spec["slug"], defaults=board_spec)
-            if not created:
-                update_fields = []
-                for field in (
-                    "name",
-                    "show_in_top_menu",
-                    "board_type",
-                    "product_board_type",
-                    "description",
-                    "is_visible",
-                    "audience",
-                    "sort_order",
-                ):
-                    if field not in board_spec:
-                        continue
-                    if getattr(board, field) != board_spec[field]:
-                        setattr(board, field, board_spec[field])
-                        update_fields.append(field)
-                if update_fields:
-                    board.save(update_fields=update_fields)
+        for spec in board_specs:
+            board, created = Board.objects.get_or_create(slug=spec["slug"], defaults=spec)
             boards[board.slug] = board
-            message = "생성" if created else "유지"
-            self.stdout.write(f"[게시판] {board.name} ({board.slug}) {message}")
+            if created:
+                self.stdout.write(f"[게시판] {board.name} ({board.slug}) 생성")
+            else:
+                self.stdout.write(f"[게시판] {board.name} ({board.slug}) 이미 존재")
 
         return boards
 
@@ -233,26 +192,26 @@ class Command(BaseCommand):
                     "member_type": user_spec["member_type"],
                 },
             )
-            update_fields = []
-            if user.member_type != user_spec["member_type"]:
-                user.member_type = user_spec["member_type"]
-                update_fields.append("member_type")
-            if user.nickname != user_spec["nickname"]:
-                user.nickname = user_spec["nickname"]
-                update_fields.append("nickname")
-            if not user.check_password(user_spec["password"]):
+            if created:
                 user.set_password(user_spec["password"])
-                if created:
-                    user.save()
-                else:
-                    user.save()
-                self.stdout.write(self.style.SUCCESS(f"기본 {user_spec['nickname']} 계정을 준비했습니다: {user_spec['username']}"))
-                continue
-            if update_fields:
-                user.save(update_fields=update_fields)
+                user.save()
+                self.stdout.write(self.style.SUCCESS(f"기본 {user_spec['nickname']} 계정을 생성했습니다: {user_spec['username']}"))
+            else:
+                self.stdout.write(self.style.WARNING(f"기본 {user_spec['nickname']} 계정이 이미 존재합니다 (비밀번호 유지)"))
 
     def _ensure_product_catalog(self, *, user):
-        """메인 좌측 메뉴와 상품 탐색용 기본 카테고리/필터를 생성한다."""
+        """메인 좌측 메뉴와 상품 탐색용 기본 카테고리/필터를 생성한다.
+
+        [운영 정책]
+        - catalog_productcategory, categoryfilter, filteroption 은 운영 데이터.
+        - 이미 카테고리가 존재하면 bootstrap 이 추가 생성/수정 시도하지 않음 (admin 이 관리).
+        """
+        if ProductCategory.objects.exists():
+            self.stdout.write(
+                self.style.WARNING("[상품카테고리] 운영 데이터 존재 → bootstrap product catalog 스킵 (Admin 설정 유지)")
+            )
+            return
+
         category_specs = [
             {
                 "name": "골프",
@@ -347,25 +306,17 @@ class Command(BaseCommand):
         ]
 
         for provider_spec in provider_specs:
-            provider, created = ExternalProvider.objects.get_or_create(
+            ExternalProvider.objects.get_or_create(
                 code=provider_spec["code"],
                 defaults=provider_spec,
             )
-            if not created:
-                update_fields = []
-                for field in ("name", "provider_type", "base_url", "credentials_hint", "is_active"):
-                    expected_value = provider_spec.get(field)
-                    if getattr(provider, field) != expected_value:
-                        setattr(provider, field, expected_value)
-                        update_fields.append(field)
-                if update_fields:
-                    provider.save(update_fields=update_fields)
 
     def _ensure_home_product_sections(self, *, boards):
         """메인 홈의 그리드형 상품 탭 기본값을 준비한다.
 
-        A안(스펙=진실): specs에 정의된 대로 항상 동기화.
-        상위노출/하단 섹션은 bootstrap 스펙이 최종 목표 형태를 정의.
+        기존 운영 설정(어드민에서 수정한 제목/순서/연결 등)을 덮어쓰지 않도록 안전하게 변경.
+        - 이미 해당 title의 섹션이 존재하면 건너뜀 (admin 변경 존중)
+        - 없는 경우에만 생성
         """
         section_specs = [
             {
@@ -391,28 +342,16 @@ class Command(BaseCommand):
         for section_spec in section_specs:
             if section_spec["source_type"] == HomeProductSectionConfig.SOURCE_PRODUCT_BOARD and section_spec["board"] is None:
                 continue
+            # 이미 존재하면 덮어쓰지 않음 (기존 admin 설정 보호)
+            if HomeProductSectionConfig.objects.filter(title=section_spec["title"]).exists():
+                self.stdout.write(f"[홈섹션] {section_spec['title']} 이미 존재 → admin 설정 유지")
+                continue
             section, created = HomeProductSectionConfig.objects.get_or_create(
                 title=section_spec["title"],
                 defaults={**section_spec, "is_active": True},
             )
             if created:
                 self.stdout.write(f"[홈섹션] {section.title} 생성됨 (초기 시드)")
-                continue
-
-            # 스펙과 다르면 업데이트 (A안: 스펙이 진실)
-            update_fields = []
-            for field in ("description", "source_type", "board", "category_keyword", "item_limit", "sort_order"):
-                current = section.board_id if field == "board" else getattr(section, field)
-                expected = section_spec[field].id if field == "board" and section_spec[field] is not None else section_spec[field]
-                if current != expected:
-                    setattr(section, field, section_spec[field])
-                    update_fields.append(field)
-            if not section.is_active:
-                section.is_active = True
-                update_fields.append("is_active")
-            if update_fields:
-                section.save(update_fields=update_fields)
-                self.stdout.write(f"[홈섹션] {section.title} 스펙 동기화")
 
     def _ensure_sample_content(self, *, user, boards):
         """초기 확인용 샘플 콘텐츠를 생성한다."""
@@ -634,7 +573,18 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("샘플 데이터 생성을 완료했습니다."))
 
     def _ensure_hotdeal_categories(self):
-        """핫딜 좌측 메뉴에 노출할 기본 카테고리를 생성한다."""
+        """핫딜 좌측 메뉴에 노출할 기본 카테고리를 생성한다.
+
+        [운영 정책]
+        - hotdeals_hotdealcategory 는 운영 데이터 (admin 이 is_visible, sort_order, 이름 등을 관리).
+        - 이미 데이터 존재 시 bootstrap 이 UPDATE 하지 않음.
+        """
+        if HotdealCategory.objects.exists():
+            self.stdout.write(
+                self.style.WARNING("[핫딜카테고리] 운영 데이터 존재 → bootstrap hotdeal categories 스킵 (Admin 설정 유지)")
+            )
+            return
+
         category_specs = [
             ("가전/디지털", "전자기기와 디지털 기기 딜을 묶는 분류", 0),
             ("패션/잡화", "의류, 신발, 가방, 액세서리 딜 분류", 1),
@@ -642,7 +592,7 @@ class Command(BaseCommand):
             ("식품/건강", "식품, 음료, 건강기능식품 딜 분류", 3),
         ]
         for name, description, sort_order in category_specs:
-            category, created = HotdealCategory.objects.get_or_create(
+            HotdealCategory.objects.get_or_create(
                 slug=name,
                 defaults={
                     "name": name,
@@ -651,25 +601,23 @@ class Command(BaseCommand):
                     "is_visible": True,
                 },
             )
-            if not created:
-                update_fields = []
-                for field, expected in {
-                    "name": name,
-                    "description": description,
-                    "sort_order": sort_order,
-                    "is_visible": True,
-                }.items():
-                    if getattr(category, field) != expected:
-                        setattr(category, field, expected)
-                        update_fields.append(field)
-                if update_fields:
-                    category.save(update_fields=update_fields)
         first_category = HotdealCategory.objects.order_by("sort_order", "id").first()
         if first_category:
             Hotdeal.objects.filter(category__isnull=True).update(category=first_category)
 
     def _ensure_marketplace_categories(self):
-        """중고장터 좌측 메뉴에 노출할 기본 카테고리를 생성한다."""
+        """중고장터 좌측 메뉴에 노출할 기본 카테고리를 생성한다.
+
+        [운영 정책]
+        - marketplace_marketplacecategory 는 운영 데이터 (menu_placement, is_visible, sort_order 등 admin 관리).
+        - 이미 데이터 존재 시 bootstrap 이 UPDATE 하지 않음.
+        """
+        if MarketplaceCategory.objects.exists():
+            self.stdout.write(
+                self.style.WARNING("[중고장터카테고리] 운영 데이터 존재 → bootstrap marketplace categories 스킵 (Admin 설정 유지)")
+            )
+            return
+
         category_specs = [
             ("디지털기기", "노트북, 태블릿, 휴대폰, 주변기기 거래 분류", 0),
             ("가전", "생활가전과 주방가전 거래 분류", 1),
@@ -677,7 +625,7 @@ class Command(BaseCommand):
             ("패션/잡화", "의류, 신발, 가방, 시계 거래 분류", 3),
         ]
         for name, description, sort_order in category_specs:
-            category, created = MarketplaceCategory.objects.get_or_create(
+            MarketplaceCategory.objects.get_or_create(
                 slug=name,
                 defaults={
                     "name": name,
@@ -686,19 +634,109 @@ class Command(BaseCommand):
                     "is_visible": True,
                 },
             )
-            if not created:
-                update_fields = []
-                for field, expected in {
-                    "name": name,
-                    "description": description,
-                    "sort_order": sort_order,
-                    "is_visible": True,
-                }.items():
-                    if getattr(category, field) != expected:
-                        setattr(category, field, expected)
-                        update_fields.append(field)
-                if update_fields:
-                    category.save(update_fields=update_fields)
         first_category = MarketplaceCategory.objects.order_by("sort_order", "id").first()
         if first_category:
             MarketplaceItem.objects.filter(category__isnull=True).update(category=first_category)
+
+    def _ensure_test_account_passwords(self):
+        """Test 계정(admin, buy, sell)의 비밀번호를 문서화된 값으로 강제 보장.
+
+        myppl-backend-temp 같은 개발/테스트 환경에서 로그인 페이지에 안내된 계정으로
+        항상 로그인할 수 있게 한다. (운영 중인 실제 회원 비번은 절대 변경하지 않음)
+        bootstrap 이 실행될 때마다 (또는 one-off으로 호출될 때) 보장된다.
+        """
+        user_model = get_user_model()
+        test_accounts = [
+            ("admin", "admin"),
+            ("buy", "buy"),
+            ("sell", "sell"),
+        ]
+        for username, password in test_accounts:
+            try:
+                user = user_model.objects.get(username=username)
+                user.set_password(password)
+                user.save(update_fields=["password"])
+                self.stdout.write(self.style.SUCCESS(f"[TEST ACCOUNT] {username} 비밀번호를 '{password}'(으)로 강제 설정했습니다."))
+            except user_model.DoesNotExist:
+                self.stdout.write(self.style.WARNING(f"[TEST ACCOUNT] {username} 계정이 DB에 없습니다 (생성되지 않음)."))
+
+    def _ensure_hero_slides(self):
+        """히어로 슬라이드 초기 생성 (빈 경우에만).
+
+        운영 중인 DB에서는 Admin panel이 원본.
+        bootstrap은 최초 설치 시에만 hero 슬라이드를 생성한다.
+        (이미지 파일은 media volume에 있어야 함. seed 이미지나 수동 업로드된 파일.)
+        """
+        if HomeHeroSlide.objects.exists():
+            self.stdout.write(
+                self.style.WARNING("[히어로] 운영 데이터 존재 → bootstrap hero 스킵 (Admin 설정 유지)")
+            )
+            return
+
+        # hero_specs는 dump_bootstrap_specs 로 admin에서 export 한 현재 상태를 여기에 붙여넣거나 --bless 로 업데이트.
+        # 여기서는 예시로 seed 값 (실제 적용 시 admin export 결과로 교체).
+        hero_specs = [
+            {
+                "title": "오늘의 특가",
+                "description": "지금 가장 인기 있는 할인 상품을 빠르게 확인하세요.",
+                "badge": "",
+                "href": "https://myppl.co.kr/",
+                "image": "catalog/home-hero-slides/hero-seed-1.png",
+                "display_seconds": 4,
+                "transition_style": "fade",
+                "sort_order": 0,
+                "is_active": True,
+            },
+            {
+                "title": "신상 모아보기",
+                "description": "카테고리별 신상품을 한 번에 비교해 보세요.",
+                "badge": "",
+                "href": "https://myppl.co.kr/products",
+                "image": "catalog/home-hero-slides/hero-seed-2.png",
+                "display_seconds": 4,
+                "transition_style": "slide_lr",
+                "sort_order": 1,
+                "is_active": True,
+            },
+            {
+                "title": "중고장터 추천",
+                "description": "검증된 판매자 상품을 안전하게 둘러보세요.",
+                "badge": "",
+                "href": "https://myppl.co.kr/products?market=used",
+                "image": "catalog/home-hero-slides/hero-seed-3.png",
+                "display_seconds": 4,
+                "transition_style": "zoom",
+                "sort_order": 2,
+                "is_active": True,
+            },
+            {
+                "title": "커뮤니티 실시간",
+                "description": "구매자·판매자 커뮤니티 인기글을 놓치지 마세요.",
+                "badge": "",
+                "href": "https://myppl.co.kr/buyer-community",
+                "image": "catalog/home-hero-slides/hero-seed-4.png",
+                "display_seconds": 4,
+                "transition_style": "wipe",
+                "sort_order": 3,
+                "is_active": True,
+            },
+        ]
+
+        for spec in hero_specs:
+            slide, created = HomeHeroSlide.objects.get_or_create(
+                title=spec["title"],
+                defaults={
+                    "description": spec.get("description", ""),
+                    "badge": spec.get("badge", ""),
+                    "href": spec.get("href", ""),
+                    "image": spec.get("image", ""),
+                    "display_seconds": spec.get("display_seconds", 4),
+                    "transition_style": spec.get("transition_style", "fade"),
+                    "sort_order": spec.get("sort_order", 0),
+                    "is_active": spec.get("is_active", True),
+                },
+            )
+            if created:
+                self.stdout.write(f"[히어로] {slide.title} 생성 (image: {spec.get('image')})")
+            else:
+                self.stdout.write(f"[히어로] {slide.title} 이미 존재")
