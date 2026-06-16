@@ -18,49 +18,17 @@ type PostDetailViewProps = {
 };
 
 function renderPostContent(content: string) {
-  const imagePattern = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
-  const nodes: React.ReactNode[] = [];
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
+  // Rich Text HTML을 직접 렌더 (backend sanitize済み)
+  // 이미지 태그 등 모든 스타일/인라인 이미지가 그대로 복원됨
+  if (!content) return null;
 
-  while ((match = imagePattern.exec(content)) !== null) {
-    const [raw, alt, src] = match;
-    if (match.index > lastIndex) {
-      nodes.push(
-        <span key={`text-${lastIndex}`} className="whitespace-pre-wrap">
-          {content.slice(lastIndex, match.index)}
-        </span>
-      );
-    }
-
-    nodes.push(
-      <a
-        key={`image-${match.index}`}
-        href={resolveMediaUrl(src)}
-        target="_blank"
-        rel="noreferrer"
-        className="my-5 block overflow-hidden rounded-[0.5rem] border border-[var(--border)] bg-[var(--muted)] p-2"
-      >
-        <img
-          src={resolveMediaUrl(src)}
-          alt={alt || "본문 이미지"}
-          className="max-h-[720px] w-full object-contain"
-        />
-      </a>
-    );
-
-    lastIndex = match.index + raw.length;
-  }
-
-  if (lastIndex < content.length) {
-    nodes.push(
-      <span key={`text-${lastIndex}`} className="whitespace-pre-wrap">
-        {content.slice(lastIndex)}
-      </span>
-    );
-  }
-
-  return nodes;
+  // 간단 sanitization은 backend에서 이미 수행. frontend에서는 신뢰하고 렌더.
+  return (
+    <div
+      className="prose prose-sm max-w-none text-base leading-8 text-slate-800"
+      dangerouslySetInnerHTML={{ __html: content }}
+    />
+  );
 }
 
 export function PostDetailView({ slug, postId, initialPost }: PostDetailViewProps) {

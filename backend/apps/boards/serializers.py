@@ -6,10 +6,15 @@ from .models import Board, Comment, KeywordFilter, Post, PostImage, PostMallLink
 from .shopping_malls import infer_shopping_mall_name
 
 
-ALLOWED_TAGS = ["p", "br", "strong", "em", "u", "a", "ul", "ol", "li", "img", "h2", "h3", "blockquote", "code", "pre"]
+ALLOWED_TAGS = [
+    "p", "br", "strong", "em", "u", "s", "a", "ul", "ol", "li",
+    "img", "h2", "h3", "blockquote", "code", "pre", "span", "mark"
+]
 ALLOWED_ATTRS = {
     "a": ["href", "title", "target", "rel"],
     "img": ["src", "alt", "title", "width", "height"],
+    "span": ["style", "class"],
+    "mark": ["style", "class"],
 }
 
 
@@ -322,12 +327,15 @@ class PostWriteSerializer(serializers.ModelSerializer):
         if main_ranking_image:
             post.main_ranking_image = main_ranking_image
             post.save()
-        # 본문에 포함된 inline 이미지(URL)도 Post.images에 연결하여 thumbnail/ranking에서 사용 가능하게 함
+        # 본문에 포함된 inline 이미지(URL)도 Post.images에 연결 (HTML <img> 및 이전 markdown 둘 다 지원)
         if post.content:
             import re
             from django.core.files.storage import default_storage
-            matches = re.findall(r'!\[[^\]]*\]\((/media/posts/inline/[^)]+)\)', post.content or "")
-            for url in matches:
+            # New HTML format
+            html_matches = re.findall(r'<img[^>]*src=["\'](/media/boards/inline/[^"\']+)["\']', post.content or "")
+            # Legacy markdown support during transition
+            md_matches = re.findall(r'!\[[^\]]*\]\((/media/(?:posts|boards)/inline/[^)]+)\)', post.content or "")
+            for url in set(html_matches + md_matches):
                 rel_path = url.replace("/media/", "")
                 if default_storage.exists(rel_path):
                     pi = PostImage(post=post)
@@ -370,12 +378,14 @@ class PostWriteSerializer(serializers.ModelSerializer):
             pass
         # 본문 inline 이미지 연결 (content 변경 시 재연결)
         if "content" in validated_data or main_ranking_image:
-            instance.images.filter(image__startswith="posts/inline/").delete()  # 기존 inline 재설정
+            instance.images.filter(image__startswith="posts/inline/").delete()
+            instance.images.filter(image__startswith="boards/inline/").delete()  # 새 경로도 정리
             if instance.content:
                 import re
                 from django.core.files.storage import default_storage
-                matches = re.findall(r'!\[[^\]]*\]\((/media/posts/inline/[^)]+)\)', instance.content or "")
-                for url in matches:
+                html_matches = re.findall(r'<img[^>]*src=["\'](/media/boards/inline/[^"\']+)["\']', instance.content or "")
+                md_matches = re.findall(r'!\[[^\]]*\]\((/media/(?:posts|boards)/inline/[^)]+)\)', instance.content or "")
+                for url in set(html_matches + md_matches):
                     rel_path = url.replace("/media/", "")
                     if default_storage.exists(rel_path):
                         pi = PostImage(post=instance)

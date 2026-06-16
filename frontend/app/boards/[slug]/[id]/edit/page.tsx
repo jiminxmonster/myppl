@@ -1,13 +1,20 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Image from "@tiptap/extension-image";
+import Color from "@tiptap/extension-color";
+import TextStyle from "@tiptap/extension-text-style";
+import Underline from "@tiptap/extension-underline";
 
 import { LiveBroadcastFields } from "@/components/board/live-broadcast-fields";
 import { ShoppingMallFields } from "@/components/board/shopping-mall-fields";
 import { PageNavigator } from "@/components/layout/page-navigator";
 import { getStoredTokens } from "@/lib/auth";
-import { BoardItem, getBoardDetail, getPostDetail, ProductLiveStatus, resolveMediaUrl, updatePost } from "@/lib/api";
+import { BoardItem, getBoardDetail, getPostDetail, ProductLiveStatus, resolveMediaUrl, updatePost, uploadInlineImage } from "@/lib/api";
 import { formatDateTimeLocal } from "@/lib/live-broadcast";
 import { useAuthStore } from "@/store/authStore";
 
@@ -48,6 +55,40 @@ export default function EditPostPage({ params }: EditPageProps) {
   const [saving, setSaving] = useState(false);
 
   const isOperator = !!user && ["moderator", "admin", "superadmin"].includes(user.operator_role ?? "");
+
+  // Tiptap editor for body content (same as write page)
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Underline,
+      TextStyle,
+      Color,
+      Image.configure({ inline: true, allowBase64: false }),
+    ],
+    content: "",
+  });
+
+  const inlineImageInputRef = useRef<HTMLInputElement | null>(null);
+  const [inlineImageUploading, setInlineImageUploading] = useState(false);
+
+  async function uploadAndInsertImageToEditor(file: File) {
+    if (!editor) return;
+    const { accessToken } = getStoredTokens();
+    if (!accessToken) {
+      setError("로그인 후 본문 이미지를 업로드할 수 있습니다.");
+      return;
+    }
+    setInlineImageUploading(true);
+    try {
+      const uploaded = await uploadInlineImage(file);
+      const imageUrl = resolveMediaUrl(uploaded.url);
+      editor.chain().focus().setImage({ src: imageUrl, alt: "본문 이미지" }).run();
+    } catch (e: any) {
+      setError(e?.message || "이미지 업로드 실패");
+    } finally {
+      setInlineImageUploading(false);
+    }
+  }
 
   useEffect(() => {
     const { accessToken } = getStoredTokens();
@@ -95,6 +136,17 @@ export default function EditPostPage({ params }: EditPageProps) {
           }))
         );
         setRemoveImageIds([]);
+
+        // Tiptap에 기존 HTML content 복원 (수정 시 완전 복원 핵심)
+        // content state도 유지 (다른 로직 호환)
+        if (editor) {
+          // editor가 아직 초기화 중일 수 있으므로 다음 틱에 set
+          setTimeout(() => {
+            if (editor && post.content) {
+              editor.commands.setContent(post.content);
+            }
+          }, 0);
+        }
       } catch (loadError) {
         if (!cancelled) {
           setError(loadError instanceof Error ? loadError.message : "게시글을 불러오지 못했습니다.");
@@ -112,6 +164,13 @@ export default function EditPostPage({ params }: EditPageProps) {
       cancelled = true;
     };
   }, [isOperator, params.id, router, user]);
+
+  // 에디터가 준비되면 로드된 content 복원 (지연 로딩 대응)
+  useEffect(() => {
+    if (editor && content && editor.isEmpty) {
+      editor.commands.setContent(content);
+    }
+  }, [editor, content]);
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     setImages(event.target.files);
@@ -131,9 +190,11 @@ export default function EditPostPage({ params }: EditPageProps) {
     }
 
     try {
+      const finalContent = editor?.getHTML() || content;
+
       const post = await updatePost(params.id, {
         title,
-        content,
+        content: finalContent,
         images,
         removeImageIds,
         product_original_price: board?.board_type === "product" ? productOriginalPrice : "",
@@ -245,13 +306,24 @@ export default function EditPostPage({ params }: EditPageProps) {
           </div>
         ) : null}
         <label className="block space-y-2">
-          <span className="text-sm font-medium">본문</span>
-          <textarea
-            rows={14}
-            className="w-full rounded-[5px] border border-[var(--border)] px-4 py-4 outline-none"
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-          />
+          <span className="text-sm font-medium">본문 (Rich Text)</span>
+
+          <div className="flex flex-wrap items-center gap-1 rounded border border-[var(--border)] bg-white p-1">
+            <button type="button" onClick={() => editor?.chain().focus().toggleBold().run()} className="rounded px-2 py-1 text-xs font-semibold hover:bg-[var(--muted)]">B</button>
+            <button type="button" onClick={() => editor?.chain().focus().toggleItalic().run()} className="rounded px-2 py-1 text-xs italic hover:bg-[var(--muted)]">I</button>
+            <button type="button" onClick={() => editor?.chain().focus().toggleUnderline().run()} className="rounded px-2 py-1 text-xs underline hover:bg-[var(--muted)]">U</button>
+            <button type="button" onClick={() => editor?.chain().focus().toggleStrike().run()} className="rounded px-2 py-1 text-xs line-through hover:bg-[var(--muted)]">S</button>
+            <input type="color" onChange={(e) => editor?.chain().focus().setColor(e.target.value).run()} className="h-7 w-8 cursor-pointer rounded border border-[var(--border)] bg-white p-0.5" title="글자 색상" />
+            <div className="mx-1 h-4 w-px bg-[var(--border)]" />
+            <input ref={inlineImageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { const fs = Array.from(e.target.files||[]).filter(f=>f.type.startsWith('image/')); e.target.value=''; fs.forEach(f=>uploadAndInsertImageToEditor(f)); }} />
+            <button type="button" disabled={inlineImageUploading || !editor} onClick={() => inlineImageInputRef.current?.click()} className="rounded border border-[var(--border)] px-2 py-1 text-xs hover:bg-[var(--muted)] disabled:opacity-60">
+              {inlineImageUploading ? "업로드..." : "이미지 삽입"}
+            </button>
+          </div>
+
+          <div className="rounded-[5px] border border-[var(--border)] bg-white">
+            <EditorContent editor={editor} />
+          </div>
         </label>
         {existingImages.length > 0 ? (
           <div className="space-y-3">

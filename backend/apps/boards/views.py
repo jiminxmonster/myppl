@@ -607,8 +607,9 @@ class InlineImageUploadView(APIView):
         from django.core.files.storage import default_storage
         from django.core.files.base import ContentFile
         ext = (f.name or "img").split(".")[-1].lower()[:5]
-        name = f"posts/inline/{uuid.uuid4().hex[:10]}.{ext}"
+        # Spec: boards/inline/ (portability, direct nginx static serve)
+        name = f"boards/inline/{uuid.uuid4().hex[:10]}.{ext}"
         saved = default_storage.save(name, ContentFile(f.read()))
-        # media url (resolveMediaUrl will handle)
-        url = default_storage.url(saved)
+        # Return relative path that nginx can serve directly under /media/
+        url = f"/media/{saved}"
         return response.Response({"url": url, "success": True}, status=200)

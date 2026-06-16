@@ -1,7 +1,14 @@
 "use client";
 
-import React, { ChangeEvent, ClipboardEvent, DragEvent, FormEvent, useEffect, useRef, useState } from "react";
+import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+
+import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Image from "@tiptap/extension-image";
+import Color from "@tiptap/extension-color";
+import TextStyle from "@tiptap/extension-text-style";
+import Underline from "@tiptap/extension-underline";
 
 import { LiveBroadcastFields } from "@/components/board/live-broadcast-fields";
 import { ShoppingMallFields } from "@/components/board/shopping-mall-fields";
@@ -16,7 +23,6 @@ type WritePageProps = {
 export default function WritePage({ params }: WritePageProps) {
   const router = useRouter();
   const inlineImageInputRef = useRef<HTMLInputElement | null>(null);
-  const canvasRef = useRef<HTMLDivElement | null>(null);
   const [board, setBoard] = useState<BoardItem | null>(null);
   const [title, setTitle] = useState("");
   const [productOriginalPrice, setProductOriginalPrice] = useState("");
@@ -34,8 +40,6 @@ export default function WritePage({ params }: WritePageProps) {
   const [mainRankingImage, setMainRankingImage] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [inlineImageUploading, setInlineImageUploading] = useState(false);
-  const [isInlineDropActive, setIsInlineDropActive] = useState(false);
 
   useEffect(() => {
     void getBoardDetail(params.slug)
@@ -46,66 +50,62 @@ export default function WritePage({ params }: WritePageProps) {
   const isProductBoard = board?.board_type === "product";
   const isLiveSpecialBoard = isProductBoard && board?.product_board_type === "live_special";
 
-  async function handleInlineImageSelect(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith("image/"));
-    event.target.value = "";
-    if (files.length === 0) return;
-    for (const file of files) {
-      await uploadAndInsertImage(file);
-    }
-  }
+  // Tiptap Rich Text Editor (WYSIWYG, inline images, full formatting)
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        // We control some marks via separate extensions below
+      }),
+      Underline,
+      TextStyle,
+      Color,
+      Image.configure({
+        inline: true,           // 핵심: 이미지를 인라인으로 취급 (텍스트처럼 Backspace/Enter 동작)
+        allowBase64: false,
+      }),
+    ],
+    content: "",
+    editorProps: {
+      attributes: {
+        class: "tiptap-editor prose prose-sm max-w-none focus:outline-none min-h-[220px] p-4 border border-[var(--border)] rounded-[5px] bg-white",
+      },
+      // Drag & Drop 이미지 처리 (에디터 영역 전체)
+      handleDrop: (view, event, _slice, moved) => {
+        if (moved || !event.dataTransfer) return false;
+        const files = Array.from(event.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
+        if (files.length === 0) return false;
 
-  function createBodyImageElement(displaySrc: string, originalSrc: string): HTMLImageElement {
-    const img = document.createElement("img");
-    img.src = displaySrc;
-    img.alt = "본문 이미지";
-    img.setAttribute("data-body-image", "true");
-    img.setAttribute("data-original-src", originalSrc || displaySrc);
-    img.style.display = "block";
-    img.style.maxWidth = "100%";
-    img.style.height = "auto";
-    img.style.margin = "8px 0";
-    img.style.borderRadius = "0.5rem";
-    img.style.border = "1px solid var(--border)";
-    img.style.background = "#f8f8f8";
-    img.setAttribute("contenteditable", "false");
-    return img;
-  }
+        event.preventDefault();
+        files.forEach((file) => void uploadAndInsertImageToEditor(file, editor));
+        return true;
+      },
+      // Paste 이미지 처리
+      handlePaste: (view, event) => {
+        const items = event.clipboardData?.items;
+        if (!items) return false;
 
-  function insertImageAtCaret(displaySrc: string, originalSrc: string) {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+        const imageFiles: File[] = [];
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item.type.startsWith("image/")) {
+            const file = item.getAsFile();
+            if (file) imageFiles.push(file);
+          }
+        }
+        if (imageFiles.length === 0) return false;
 
-    canvas.focus();
+        event.preventDefault();
+        imageFiles.forEach((file) => void uploadAndInsertImageToEditor(file, editor));
+        return true;
+      },
+    },
+  });
 
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) {
-      // 커서가 없으면 끝에 추가
-      const img = createBodyImageElement(displaySrc, originalSrc);
-      canvas.appendChild(img);
-      // 이미지 뒤에 커서가 오도록 br 하나 보조
-      const br = document.createElement("br");
-      canvas.appendChild(br);
-      updateHeroLabel();
-      return;
-    }
+  const [inlineImageUploading, setInlineImageUploading] = useState(false);
 
-    const range = sel.getRangeAt(0);
-    range.deleteContents();
+  async function uploadAndInsertImageToEditor(file: File, ed: Editor | null) {
+    if (!ed) return;
 
-    const img = createBodyImageElement(displaySrc, originalSrc);
-    range.insertNode(img);
-
-    // 이미지 바로 뒤로 커서 이동 (이미지가 '문자열 한개'처럼 동작)
-    range.setStartAfter(img);
-    range.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(range);
-
-    updateHeroLabel();
-  }
-
-  async function uploadAndInsertImage(file: File) {
     const { accessToken } = getStoredTokens();
     if (!accessToken) {
       setError("로그인 후 본문 이미지를 업로드할 수 있습니다.");
@@ -117,9 +117,9 @@ export default function WritePage({ params }: WritePageProps) {
     setError("");
     try {
       const uploaded = await uploadInlineImage(file);
-      const imageUrl = resolveMediaUrl(uploaded.url);
-      // display와 markdown 원본 모두 resolve된 /media/... 경로 사용
-      insertImageAtCaret(imageUrl, imageUrl);
+      const imageUrl = resolveMediaUrl(uploaded.url); // /media/boards/inline/...
+      // 인라인 이미지로 삽입 (Tiptap Image node)
+      ed.chain().focus().setImage({ src: imageUrl, alt: "본문 이미지" }).run();
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "본문 이미지 업로드에 실패했습니다.");
     } finally {
@@ -127,136 +127,13 @@ export default function WritePage({ params }: WritePageProps) {
     }
   }
 
-  function getImageFiles(files: FileList | File[]) {
-    return Array.from(files).filter((file) => ["image/jpeg", "image/png", "image/webp"].includes(file.type));
-  }
-
-  function handleCanvasDragOver(event: DragEvent<HTMLDivElement>) {
-    if (Array.from(event.dataTransfer.items).some((item) => item.kind === "file" && item.type.startsWith("image/"))) {
-      event.preventDefault();
-      event.stopPropagation();
-      setIsInlineDropActive(true);
-    }
-  }
-
-  function handleCanvasDragLeave(event: DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-    setIsInlineDropActive(false);
-  }
-
-  async function handleCanvasDrop(event: DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-    setIsInlineDropActive(false);
-    const files = getImageFiles(event.dataTransfer.files);
+  async function handleInlineImageSelect(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith("image/"));
+    event.target.value = "";
     if (files.length === 0) return;
     for (const file of files) {
-      await uploadAndInsertImage(file);
+      await uploadAndInsertImageToEditor(file, editor);
     }
-  }
-
-  async function handleCanvasPaste(event: ClipboardEvent<HTMLDivElement>) {
-    const items = event.clipboardData?.items;
-    if (!items) return;
-    const imageFiles: File[] = [];
-    for (let i = 0; i < items.length; i++) {
-      if (["image/jpeg", "image/png", "image/webp"].includes(items[i].type)) {
-        const imageFile = items[i].getAsFile();
-        if (imageFile) imageFiles.push(imageFile);
-      }
-    }
-    if (imageFiles.length === 0) return;
-    // 이미지 붙여넣기만 우리가 처리. 텍스트는 기본 동작 허용
-    event.preventDefault();
-    for (const file of imageFiles) {
-      await uploadAndInsertImage(file);
-    }
-  }
-
-  function updateHeroLabel() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    // 기존 라벨/클래스 제거 (이미지 순서 바뀌거나 삭제 시 재계산)
-    canvas.querySelectorAll(".hero-caption").forEach((el) => el.remove());
-    canvas.querySelectorAll("img").forEach((img) => img.classList.remove("is-hero"));
-
-    // 가장 위(첫 번째) 이미지가 자동 메인히어로
-    const firstImg = canvas.querySelector("img[data-body-image]") || canvas.querySelector("img");
-    if (!firstImg) return;
-
-    firstImg.classList.add("is-hero");
-
-    const caption = document.createElement("span");
-    caption.className = "hero-caption";
-    caption.textContent = "(메인히어로이미지)";
-    caption.contentEditable = "false";
-    // 라벨은 이미지 바로 뒤에 붙여 시각적으로 "하단에 작은 글씨"
-    if (firstImg.parentNode) {
-      firstImg.parentNode.insertBefore(caption, firstImg.nextSibling);
-    }
-  }
-
-  function serializeCanvasToMarkdown(canvas: HTMLDivElement | null): string {
-    if (!canvas) return "";
-
-    const parts: string[] = [];
-
-    const walk = (node: Node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const t = node.textContent || "";
-        if (t) parts.push(t);
-        return;
-      }
-      if (node.nodeType !== Node.ELEMENT_NODE) return;
-
-      const el = node as HTMLElement;
-      if (el.classList.contains("hero-caption")) {
-        return; // 라벨은 저장 내용에 포함하지 않음
-      }
-
-      const tag = el.tagName;
-      if (tag === "IMG") {
-        let src = el.getAttribute("data-original-src") || el.getAttribute("src") || "";
-        if (src.startsWith("http://") || src.startsWith("https://")) {
-          try {
-            src = new URL(src).pathname;
-          } catch {
-            /* keep */
-          }
-        }
-        if (src && !src.startsWith("/media/") && src.includes("/media/")) {
-          src = src.slice(src.indexOf("/media/"));
-        }
-        parts.push(`![본문 이미지](${src})`);
-        return;
-      }
-      if (tag === "BR") {
-        parts.push("\n");
-        return;
-      }
-
-      // 자식 순회 (div/p 등 엔터로 생기는 블록도 처리)
-      let hadChild = false;
-      for (const child of Array.from(el.childNodes)) {
-        walk(child);
-        hadChild = true;
-      }
-      if ((tag === "DIV" || tag === "P") && hadChild) {
-        if (parts.length && !parts[parts.length - 1].endsWith("\n")) {
-          parts.push("\n");
-        }
-      }
-    };
-
-    for (const child of Array.from(canvas.childNodes)) {
-      walk(child);
-    }
-
-    let result = parts.join("");
-    result = result.replace(/\n{3,}/g, "\n\n").trim();
-    return result;
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -266,8 +143,8 @@ export default function WritePage({ params }: WritePageProps) {
       return;
     }
 
-    const finalContent = serializeCanvasToMarkdown(canvasRef.current);
-    if (!finalContent.trim()) {
+    const finalContent = editor?.getHTML() || "";
+    if (!finalContent.trim() || finalContent === "<p></p>") {
       setError("본문을 입력해주세요.");
       return;
     }
@@ -396,8 +273,53 @@ export default function WritePage({ params }: WritePageProps) {
           </div>
         ) : null}
         <label className="block space-y-2">
-          <span className="text-sm font-medium">본문 (이미지 실시간 삽입 — 캔버스에 커서와 함께 표시)</span>
-          <div className="mb-1 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium">본문 (Rich Text — Tiptap)</span>
+
+          {/* Toolbar: Bold / Italic / Underline / Strike / Color / Image insert */}
+          <div className="flex flex-wrap items-center gap-1 rounded border border-[var(--border)] bg-white p-1">
+            <button
+              type="button"
+              onClick={() => editor?.chain().focus().toggleBold().run()}
+              className={`rounded px-2 py-1 text-xs font-semibold ${editor?.isActive("bold") ? "bg-[var(--brand)] text-white" : "hover:bg-[var(--muted)]"}`}
+              title="굵게 (Bold)"
+            >
+              B
+            </button>
+            <button
+              type="button"
+              onClick={() => editor?.chain().focus().toggleItalic().run()}
+              className={`rounded px-2 py-1 text-xs italic ${editor?.isActive("italic") ? "bg-[var(--brand)] text-white" : "hover:bg-[var(--muted)]"}`}
+              title="기울임 (Italic)"
+            >
+              I
+            </button>
+            <button
+              type="button"
+              onClick={() => editor?.chain().focus().toggleUnderline().run()}
+              className={`rounded px-2 py-1 text-xs underline ${editor?.isActive("underline") ? "bg-[var(--brand)] text-white" : "hover:bg-[var(--muted)]"}`}
+              title="밑줄 (Underline)"
+            >
+              U
+            </button>
+            <button
+              type="button"
+              onClick={() => editor?.chain().focus().toggleStrike().run()}
+              className={`rounded px-2 py-1 text-xs line-through ${editor?.isActive("strike") ? "bg-[var(--brand)] text-white" : "hover:bg-[var(--muted)]"}`}
+              title="취소선 (Strike)"
+            >
+              S
+            </button>
+
+            {/* Color picker */}
+            <input
+              type="color"
+              onChange={(e) => editor?.chain().focus().setColor(e.target.value).run()}
+              className="h-7 w-8 cursor-pointer rounded border border-[var(--border)] bg-white p-0.5"
+              title="글자 색상"
+            />
+
+            <div className="mx-1 h-4 w-px bg-[var(--border)]" />
+
             <input
               ref={inlineImageInputRef}
               type="file"
@@ -408,30 +330,22 @@ export default function WritePage({ params }: WritePageProps) {
             />
             <button
               type="button"
-              disabled={inlineImageUploading}
+              disabled={inlineImageUploading || !editor}
               onClick={() => inlineImageInputRef.current?.click()}
-              className="rounded-[5px] border border-[var(--border)] px-3 py-2 text-xs font-semibold hover:bg-[var(--muted)] disabled:opacity-60"
+              className="rounded-[4px] border border-[var(--border)] px-3 py-1 text-xs font-semibold hover:bg-[var(--muted)] disabled:opacity-60"
             >
-              {inlineImageUploading ? "이미지 업로드 중..." : "본문 이미지 삽입"}
+              {inlineImageUploading ? "업로드 중..." : "이미지 삽입"}
             </button>
-            <span className="self-center text-[10px] text-slate-500">JPG, PNG, WEBP / 8MB 이하. 캔버스 안 커서 위치에 이미지가 바로 보입니다. 이미지 클릭/백스페이스로 지우기, 엔터로 아래로 내리기 가능.</span>
+            <span className="ml-2 text-[10px] text-slate-500">
+              드래그&amp;드롭 또는 붙여넣기로 이미지를 에디터 안에 바로 넣을 수 있습니다. (이미지는 인라인으로 동작)
+            </span>
           </div>
-          {/* 실시간 이미지 + 텍스트 혼합 캔버스. 별도 미리보기 없음. 이미지 = 문자열처럼 동작 */}
-          <div
-            ref={canvasRef}
-            contentEditable
-            className={`post-write-canvas transition ${
-              isInlineDropActive
-                ? "border-[var(--brand)] bg-emerald-50 ring-2 ring-[var(--brand)]/20"
-                : ""
-            }`}
-            onDragOver={handleCanvasDragOver}
-            onDragLeave={handleCanvasDragLeave}
-            onDrop={handleCanvasDrop}
-            onPaste={handleCanvasPaste}
-            onInput={() => updateHeroLabel()}
-            aria-label="게시글 본문 캔버스"
-          />
+
+          {/* The actual live WYSIWYG editor — no separate preview pane */}
+          <div className="rounded-[5px] border border-[var(--border)] bg-white">
+            <EditorContent editor={editor} />
+          </div>
+          <p className="text-[10px] text-slate-400">글자 스타일 + 인라인 이미지 지원. Backspace로 이미지 삭제, Enter로 줄바꿈.</p>
         </label>
 
         {error ? <p className="text-sm text-red-600">{error}</p> : null}

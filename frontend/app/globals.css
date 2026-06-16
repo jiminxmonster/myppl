@@ -73,3 +73,25 @@ a {
   color: #94a3b8;
   font-size: 13px;
 }
+
+/* Tiptap Rich Text Editor styles */
+.tiptap-editor {
+  min-height: 220px;
+  outline: none;
+}
+.tiptap-editor p {
+  margin: 0.5em 0;
+}
+.tiptap-editor img {
+  display: inline;
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+  margin: 0 2px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.tiptap-editor strong { font-weight: 700; }
+.tiptap-editor em { font-style: italic; }
+.tiptap-editor u { text-decoration: underline; }
+.tiptap-editor s { text-decoration: line-through; }
