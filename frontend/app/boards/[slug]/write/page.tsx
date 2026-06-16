@@ -65,6 +65,7 @@ export default function WritePage({ params }: WritePageProps) {
       }),
     ],
     content: "",
+    immediatelyRender: false,   // Next.js SSR hydration 문제 방지 (Tiptap 권장)
     editorProps: {
       attributes: {
         class: "tiptap-editor prose prose-sm max-w-none focus:outline-none min-h-[220px] p-4 border border-[var(--border)] rounded-[5px] bg-white",

@@ -66,6 +66,7 @@ export default function EditPostPage({ params }: EditPageProps) {
       Image.configure({ inline: true, allowBase64: false }),
     ],
     content: "",
+    immediatelyRender: false,   // Next.js SSR hydration 문제 방지 (Tiptap 권장)
   });
 
   const inlineImageInputRef = useRef<HTMLInputElement | null>(null);
