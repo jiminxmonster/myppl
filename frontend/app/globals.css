@@ -29,3 +29,47 @@ a {
 * {
   box-sizing: border-box;
 }
+
+/* 게시글 작성 캔버스: 이미지 실시간 표시 + 커서와 함께 텍스트/이미지 혼합 편집 (히어로=첫 이미지 자동 라벨) */
+.post-write-canvas {
+  width: 100%;
+  min-height: 260px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 16px;
+  background: #fff;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #14213d;
+  outline: none;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.post-write-canvas:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px rgba(18, 91, 80, 0.12);
+}
+.post-write-canvas img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 8px 0;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: #f8f8f8;
+}
+.post-write-canvas .hero-caption {
+  display: block;
+  font-size: 10px;
+  line-height: 1;
+  color: #64748b;
+  margin-top: -2px;
+  margin-bottom: 10px;
+  user-select: none;
+  pointer-events: none;
+}
+.post-write-canvas:empty::before {
+  content: "여기에 글을 쓰고, 이미지를 삽입하세요. (버튼 / 드래그 / 붙여넣기)";
+  color: #94a3b8;
+  font-size: 13px;
+}
