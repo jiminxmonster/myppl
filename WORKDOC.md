@@ -149,14 +149,82 @@ Cloud Run에서 발생한 복잡도(`Secret`, `Revision`, `CORS`, `DB_HOST`, `Bo
 
 ### 1.2 수정 및 업데이트 작업방식
 
-- 사용자는 배포주소를 기준 화면으로 보고 수정사항을 지시한다.
-- 기준 배포주소는 `https://myppl-frontend-temp-bexuss3nja-du.a.run.app/`이다.
+- 사용자는 VM 배포주소를 기준 화면으로 보고 수정사항을 지시한다.
+- 현재 기준 배포주소는 `http://34.22.96.236:8080/`이다.
+- Cloud Run 주소는 이전 임시 배포 환경이며, 신규 수정/검수 기준으로 사용하지 않는다.
 - 실제 코드는 로컬 작업공간 `/Users/bannykick/Documents/work/comunitysite`에서 수정한다.
-- 수정 후 로컬 `http://localhost:3100`에서 빠르게 확인한다.
+- 수정 후 로컬 `http://localhost:3100` 또는 Docker nginx `http://localhost:8080`에서 빠르게 확인한다.
 - 로컬 확인 후 사용자가 승인하면 Git 커밋/푸시를 진행한다.
-- GitHub 푸시 후 CI/CD 또는 Cloud Build/Cloud Run 배포로 서버를 업데이트한다.
-- 배포 후에는 Cloud Run 공식 URL과 최신 리비전, 트래픽 100% 연결 여부를 확인한다.
+- 서버 반영은 VM Docker Compose 기준으로 진행한다.
 - 배포주소에서 직접 코드를 수정하지 않는다. 배포주소는 수정 지시와 최종 확인용 화면이다.
+
+### 1.3 로그인/API 안정화 필수 절차
+
+수정할 때마다 로그인 실패가 반복되지 않도록, 프론트/백엔드/API/배포 변경 전후에 아래 절차를 필수로 수행한다.
+
+현재 학습 결과:
+
+- 로그인 장애가 반복된 직접 원인은 계정/DB가 아니라 프론트 컨테이너 실행 구조였다.
+- `next start`는 `.next` production build가 있어야 정상 실행된다.
+- `frontend` 서비스에 `./frontend:/app`, `/app/.next` 볼륨을 걸면 이미지 안에 생성된 `.next` 빌드 결과가 가려질 수 있다.
+- 이 상태에서는 빌드가 성공해도 실행 시 프론트가 재시작하거나, 오래된 번들/잘못된 API 대상이 남아 로그인 실패로 보일 수 있다.
+- VM/운영 기준 `frontend`는 소스 볼륨 마운트 없이 빌드된 이미지 기준으로 실행해야 한다.
+- VM/운영 기준 `NEXT_PUBLIC_API_URL`은 빌드 args로 `frontend` 이미지에 주입되어야 한다.
+- VM 로그인 페이지의 API 대상은 `/api/v1`이어야 한다.
+
+필수 하네스:
+
+```bash
+# 로컬 Docker nginx 기준
+scripts/auth_stability_harness.sh local-nginx
+
+# VM 기준
+scripts/auth_stability_harness.sh vm
+```
+
+하네스가 확인하는 항목:
+
+- `/login` HTTP 200
+- `admin / admin`, `buy / buy`, `sell / sell` API 로그인 200
+- VM 로그인 페이지에 `localhost` API 대상이 섞이지 않았는지
+- `frontend`, `backend`, `nginx` 컨테이너 상태
+- VM `frontend` 환경의 `NEXT_PUBLIC_API_URL`
+
+수정 전 확인:
+
+- 현재 기준 화면이 로컬인지 VM인지 먼저 명시한다.
+- 프론트가 바라보는 API 주소를 확인한다.
+- 로그인 실패가 있으면 먼저 API 직접 호출로 계정 상태를 확인한다.
+- `admin / admin`, `buy / buy`, `sell / sell` 세 계정 모두 API 로그인 200 여부를 확인한다.
+- API 로그인이 200이면 계정/백엔드 문제가 아니라 프론트 호출, 토큰 저장, API base URL, CORS, 프록시 문제로 좁힌다.
+- API 로그인이 실패하면 프론트 수정으로 해결하지 말고 백엔드 인증/DB/부트스트랩 여부부터 확인한다.
+
+수정 후 확인:
+
+- 프론트 빌드 또는 타입 체크를 1회 수행한다.
+- 로컬 또는 VM에서 프론트 컨테이너가 최신 코드로 재시작되었는지 확인한다.
+- 수정 후 `scripts/auth_stability_harness.sh local-nginx`를 실행한다.
+- VM 반영 후 `scripts/auth_stability_harness.sh vm`을 실행한다.
+- 브라우저 강력 새로고침 후 로그인 페이지의 API 대상 표시가 현재 환경과 맞는지 확인한다.
+- `admin / admin`, `buy / buy`, `sell / sell` 로그인을 실제 화면 또는 API로 확인한다.
+- 로그인 성공 후 `/admin-panel`, `/boards/seller-hot-issues/write`, `/boards/구매자-공유-핫이슈/write` 중 수정 범위와 관련된 화면 1개 이상을 확인한다.
+
+로그인 장애 발생 시 판단 기준:
+
+- 화면에 `대상: http://localhost:8000/api/v1`가 표시되면 프론트가 로컬 백엔드를 바라보는 상태다.
+- 로컬 백엔드가 꺼져 있으면 로그인은 실패한다. 이 경우 백엔드를 켜거나 API base를 현재 기준 환경에 맞춘다.
+- VM 기준에서는 브라우저가 `/api/v1` 또는 `http://34.22.96.236:8080/api/v1`로 호출해야 한다.
+- 서버 배포 후에도 `/api/v1/auth/login/` 직접 호출이 200이면 DB 계정은 정상이다.
+- 로그인 실패 메시지만 보고 계정 초기화, bootstrap 실행, seed 실행을 하지 않는다.
+
+절대 금지:
+
+- 로그인 복구 목적으로 `bootstrap_community.py`를 실행하지 않는다.
+- 운영 DB의 관리자 비밀번호를 bootstrap으로 덮어쓰지 않는다.
+- Docker volume 삭제, DB 초기화, seed 재투입은 사용자 승인 없이 하지 않는다.
+- 로그인 문제와 무관한 메뉴, Hero, 게시판, 메인 순위 코드를 함께 수정하지 않는다.
+- VM/운영 `frontend`에 `./frontend:/app`, `/app/.next` 볼륨 마운트를 되살리지 않는다.
+- `NEXT_PUBLIC_API_URL` 빌드 args 없이 VM/운영 프론트를 배포하지 않는다.
 
 ## 2. 원본 문서 통합
 

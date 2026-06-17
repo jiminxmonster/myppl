@@ -241,6 +241,14 @@ export function resolveMediaUrl(path: string) {
     return path;
   }
 
+  // For any path that is already a clean root-relative media path (the common case
+  // for body images we insert as ![...](/media/posts/inline/xxx.png)), return it
+  // as-is. This guarantees identical output on server (SSR) and client (hydration),
+  // preventing "Text content does not match server-rendered HTML" errors.
+  if (path.startsWith("/media/")) {
+    return path;
+  }
+
   const publicApiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
   const publicBackendOrigin = publicApiBaseUrl.replace(/\/api\/v1\/?$/, "");
   const internalApiBaseUrl = process.env.NEXT_INTERNAL_API_URL ?? "http://backend:8000/api/v1";
@@ -253,11 +261,9 @@ export function resolveMediaUrl(path: string) {
     try {
       const mediaUrl = new URL(path);
       if ((mediaUrl.hostname === "localhost" || mediaUrl.hostname === "127.0.0.1" || mediaUrl.hostname === "34.22.96.236") && mediaUrl.pathname.startsWith("/media/")) {
-        // Force correct port for VM (8080 via nginx) or local
-        const correctOrigin = mediaUrl.hostname === "34.22.96.236"
-          ? "http://34.22.96.236:8080"
-          : publicBackendOrigin;
-        return `${correctOrigin}${mediaUrl.pathname}${mediaUrl.search}`;
+        // Force correct port for VM (8080 via nginx) or local.
+        // Note: we still prefer to return a root-relative path when possible for hydration stability.
+        return mediaUrl.pathname + mediaUrl.search;
       }
     } catch {
       return path;
@@ -265,8 +271,7 @@ export function resolveMediaUrl(path: string) {
     return path;
   }
 
-  // Ensure media paths have /media/ prefix (handles raw storage names like "catalog/home-hero-slides/xx.png"
-  // or "/catalog/..." that sometimes come from DB/serializer in hero slides etc.)
+  // Ensure media paths have /media/ prefix (handles raw storage names like "posts/inline/xx.png")
   let mediaPath = path;
   if (!mediaPath.includes("/media/")) {
     if (mediaPath.startsWith("/")) {
@@ -276,7 +281,9 @@ export function resolveMediaUrl(path: string) {
     }
   }
 
-  return `${publicBackendOrigin}${mediaPath}`;
+  // Return as root-relative path when we can (best for hydration).
+  // Only prefix with origin for truly external or special cases.
+  return mediaPath;
 }
 
 export function getProductPlaceholder(type: "hotdeal" | "marketplace", categoryName?: string | null) {

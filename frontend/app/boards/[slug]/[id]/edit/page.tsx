@@ -3,7 +3,7 @@
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Color from "@tiptap/extension-color";
@@ -25,10 +25,30 @@ type EditPageProps = {
   };
 };
 
-type ExistingImageItem = {
-  id: number;
-  url: string;
-};
+const TextStyleWithFontSize = TextStyle.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      fontSize: {
+        default: null,
+        parseHTML: (element) => element.style.fontSize || null,
+        renderHTML: (attributes) => {
+          if (!attributes.fontSize) {
+            return {};
+          }
+          return { style: `font-size: ${attributes.fontSize}` };
+        },
+      },
+    };
+  },
+});
+
+const FONT_SIZE_OPTIONS = [
+  { label: "작게", value: "14px" },
+  { label: "기본", value: "16px" },
+  { label: "크게", value: "20px" },
+  { label: "매우 크게", value: "24px" },
+];
 
 export default function EditPostPage({ params }: EditPageProps) {
   const router = useRouter();
@@ -46,9 +66,6 @@ export default function EditPostPage({ params }: EditPageProps) {
   const [productLiveStatus, setProductLiveStatus] = useState<ProductLiveStatus>("scheduled");
   const [productLiveBenefit, setProductLiveBenefit] = useState("");
   const [productLiveButtonLabel, setProductLiveButtonLabel] = useState("라이브 보기");
-  const [images, setImages] = useState<FileList | null>(null);
-  const [existingImages, setExistingImages] = useState<ExistingImageItem[]>([]);
-  const [removeImageIds, setRemoveImageIds] = useState<number[]>([]);
   const [board, setBoard] = useState<BoardItem | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -59,21 +76,92 @@ export default function EditPostPage({ params }: EditPageProps) {
   // Tiptap editor for body content (same as write page)
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({}),
       Underline,
-      TextStyle,
+      TextStyleWithFontSize,
       Color,
-      Image.configure({ inline: true, allowBase64: false }),
+      Image.configure({ inline: false, allowBase64: false }),
     ],
     content: "",
     immediatelyRender: false,   // Next.js SSR hydration 문제 방지 (Tiptap 권장)
+    editorProps: {
+      attributes: {
+        class: "tiptap-editor prose prose-sm max-w-none focus:outline-none min-h-[220px] p-4 border border-[var(--border)] rounded-[5px] bg-white",
+      },
+      handleDrop: (_view, event, _slice, moved) => {
+        if (moved || !event.dataTransfer) {
+          return false;
+        }
+        const files = Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith("image/"));
+        if (files.length === 0) {
+          return false;
+        }
+
+        event.preventDefault();
+        files.forEach((file) => void uploadAndInsertImageToEditor(file, editor));
+        return true;
+      },
+      handlePaste: (_view, event) => {
+        const items = event.clipboardData?.items;
+        if (!items) {
+          return false;
+        }
+
+        const imageFiles: File[] = [];
+        for (let index = 0; index < items.length; index += 1) {
+          const item = items[index];
+          if (item.type.startsWith("image/")) {
+            const file = item.getAsFile();
+            if (file) {
+              imageFiles.push(file);
+            }
+          }
+        }
+
+        if (imageFiles.length === 0) {
+          return false;
+        }
+
+        event.preventDefault();
+        imageFiles.forEach((file) => void uploadAndInsertImageToEditor(file, editor));
+        return true;
+      },
+    },
   });
 
   const inlineImageInputRef = useRef<HTMLInputElement | null>(null);
   const [inlineImageUploading, setInlineImageUploading] = useState(false);
 
-  async function uploadAndInsertImageToEditor(file: File) {
-    if (!editor) return;
+  useEffect(() => {
+    if (!editor) {
+      return;
+    }
+
+    const markFirstImage = () => {
+      const imageNodes = Array.from(editor.view.dom.querySelectorAll("img"));
+      imageNodes.forEach((imageNode, index) => {
+        if (index === 0) {
+          imageNode.setAttribute("data-main-exposure", "true");
+          imageNode.setAttribute("title", "메인노출");
+        } else {
+          imageNode.removeAttribute("data-main-exposure");
+          imageNode.removeAttribute("title");
+        }
+      });
+    };
+
+    markFirstImage();
+    editor.on("update", markFirstImage);
+    editor.on("selectionUpdate", markFirstImage);
+
+    return () => {
+      editor.off("update", markFirstImage);
+      editor.off("selectionUpdate", markFirstImage);
+    };
+  }, [editor]);
+
+  async function uploadAndInsertImageToEditor(file: File, ed: Editor | null = editor) {
+    if (!ed) return;
     const { accessToken } = getStoredTokens();
     if (!accessToken) {
       setError("로그인 후 본문 이미지를 업로드할 수 있습니다.");
@@ -83,7 +171,7 @@ export default function EditPostPage({ params }: EditPageProps) {
     try {
       const uploaded = await uploadInlineImage(file);
       const imageUrl = resolveMediaUrl(uploaded.url);
-      editor.chain().focus().setImage({ src: imageUrl, alt: "본문 이미지" }).run();
+      preserveScroll(() => ed.chain().focus(undefined, { scrollIntoView: false }).setImage({ src: imageUrl, alt: "본문 이미지" }).run());
     } catch (e: any) {
       setError(e?.message || "이미지 업로드 실패");
     } finally {
@@ -130,14 +218,6 @@ export default function EditPostPage({ params }: EditPageProps) {
         setProductLiveBenefit(post.product_live_benefit ?? "");
         setProductLiveButtonLabel(post.product_live_button_label || "라이브 보기");
         setBoard(boardItem);
-        setExistingImages(
-          post.images.map((image) => ({
-            id: image.id,
-            url: resolveMediaUrl(image.image),
-          }))
-        );
-        setRemoveImageIds([]);
-
         // Tiptap에 기존 HTML content 복원 (수정 시 완전 복원 핵심)
         // content state도 유지 (다른 로직 호환)
         if (editor) {
@@ -173,10 +253,6 @@ export default function EditPostPage({ params }: EditPageProps) {
     }
   }, [editor, content]);
 
-  const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setImages(event.target.files);
-  };
-
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSaving(true);
@@ -196,8 +272,6 @@ export default function EditPostPage({ params }: EditPageProps) {
       const post = await updatePost(params.id, {
         title,
         content: finalContent,
-        images,
-        removeImageIds,
         product_original_price: board?.board_type === "product" ? productOriginalPrice : "",
         product_sale_price: board?.board_type === "product" ? productSalePrice : "",
         product_live_url: board?.board_type === "product" ? productLiveUrl.trim() : "",
@@ -226,11 +300,27 @@ export default function EditPostPage({ params }: EditPageProps) {
     }
   };
 
-  const toggleRemoveImage = (imageId: number) => {
-    setRemoveImageIds((previous) =>
-      previous.includes(imageId) ? previous.filter((id) => id !== imageId) : [...previous, imageId]
-    );
-  };
+  async function handleInlineImageSelect(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith("image/"));
+    event.target.value = "";
+    for (const file of files) {
+      await uploadAndInsertImageToEditor(file, editor);
+    }
+  }
+
+  function preserveScroll(action: () => void) {
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    action();
+    window.requestAnimationFrame(() => window.scrollTo(scrollX, scrollY));
+  }
+
+  function runEditorCommand(action: (ed: Editor) => void) {
+    if (!editor) {
+      return;
+    }
+    preserveScroll(() => action(editor));
+  }
 
   if (loading) {
     return <section className="mx-auto max-w-4xl rounded-[0.67rem] border border-[var(--border)] bg-white/95 p-8 shadow-soft">불러오는 중...</section>;
@@ -306,73 +396,50 @@ export default function EditPostPage({ params }: EditPageProps) {
             ) : null}
           </div>
         ) : null}
-        <label className="block space-y-2">
-          <span className="text-sm font-medium">본문 (Rich Text)</span>
+        <div className="block space-y-2">
+          <span className="text-sm font-medium">본문 (이미지 본문 삽입 지원)</span>
+          {board?.board_type === "product" ? (
+            <span className="block text-xs text-slate-500">
+              본문에 삽입한 첫 번째 이미지가 메인 순위 노출 이미지로 사용됩니다. 에디터 안 첫 이미지에는 "메인노출" 표시가 붙습니다.
+            </span>
+          ) : null}
 
           <div className="flex flex-wrap items-center gap-1 rounded border border-[var(--border)] bg-white p-1">
-            <button type="button" onClick={() => editor?.chain().focus().toggleBold().run()} className="rounded px-2 py-1 text-xs font-semibold hover:bg-[var(--muted)]">B</button>
-            <button type="button" onClick={() => editor?.chain().focus().toggleItalic().run()} className="rounded px-2 py-1 text-xs italic hover:bg-[var(--muted)]">I</button>
-            <button type="button" onClick={() => editor?.chain().focus().toggleUnderline().run()} className="rounded px-2 py-1 text-xs underline hover:bg-[var(--muted)]">U</button>
-            <button type="button" onClick={() => editor?.chain().focus().toggleStrike().run()} className="rounded px-2 py-1 text-xs line-through hover:bg-[var(--muted)]">S</button>
-            <input type="color" onChange={(e) => editor?.chain().focus().setColor(e.target.value).run()} className="h-7 w-8 cursor-pointer rounded border border-[var(--border)] bg-white p-0.5" title="글자 색상" />
+            <button type="button" onClick={() => runEditorCommand((ed) => ed.chain().focus(undefined, { scrollIntoView: false }).toggleBold().run())} className="rounded px-2 py-1 text-xs font-semibold hover:bg-[var(--muted)]">B</button>
+            <button type="button" onClick={() => runEditorCommand((ed) => ed.chain().focus(undefined, { scrollIntoView: false }).toggleItalic().run())} className="rounded px-2 py-1 text-xs italic hover:bg-[var(--muted)]">I</button>
+            <button type="button" onClick={() => runEditorCommand((ed) => ed.chain().focus(undefined, { scrollIntoView: false }).toggleUnderline().run())} className="rounded px-2 py-1 text-xs underline hover:bg-[var(--muted)]">U</button>
+            <button type="button" onClick={() => runEditorCommand((ed) => ed.chain().focus(undefined, { scrollIntoView: false }).toggleStrike().run())} className="rounded px-2 py-1 text-xs line-through hover:bg-[var(--muted)]">S</button>
+            <select
+              defaultValue=""
+              onChange={(event) => {
+                const fontSize = event.target.value;
+                if (!fontSize) {
+                  return;
+                }
+                runEditorCommand((ed) => ed.chain().focus(undefined, { scrollIntoView: false }).setMark("textStyle", { fontSize }).run());
+                event.target.value = "";
+              }}
+              className="h-7 rounded border border-[var(--border)] bg-white px-2 text-xs"
+              title="글자 크기"
+            >
+              <option value="" disabled>글자 크기</option>
+              {FONT_SIZE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <input type="color" onChange={(e) => runEditorCommand((ed) => ed.chain().focus(undefined, { scrollIntoView: false }).setColor(e.target.value).run())} className="h-7 w-8 cursor-pointer rounded border border-[var(--border)] bg-white p-0.5" title="글자 색상" />
             <div className="mx-1 h-4 w-px bg-[var(--border)]" />
-            <input ref={inlineImageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { const fs = Array.from(e.target.files||[]).filter(f=>f.type.startsWith('image/')); e.target.value=''; fs.forEach(f=>uploadAndInsertImageToEditor(f)); }} />
+            <input ref={inlineImageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleInlineImageSelect} />
             <button type="button" disabled={inlineImageUploading || !editor} onClick={() => inlineImageInputRef.current?.click()} className="rounded border border-[var(--border)] px-2 py-1 text-xs hover:bg-[var(--muted)] disabled:opacity-60">
               {inlineImageUploading ? "업로드..." : "이미지 삽입"}
             </button>
           </div>
+          <p className="text-xs text-slate-500">버튼으로 이미지를 선택하거나, 에디터 안에 이미지를 끌어다 놓거나 붙여넣으면 커서 위치에 본문 이미지로 삽입됩니다.</p>
 
-          <div className="rounded-[5px] border border-[var(--border)] bg-white">
+          <div className="rounded-[5px] bg-white">
             <EditorContent editor={editor} />
           </div>
-        </label>
-        {existingImages.length > 0 ? (
-          <div className="space-y-3">
-            <p className="text-sm font-medium">기존 이미지</p>
-            <div className="grid gap-4 md:grid-cols-2">
-              {existingImages.map((imageItem) => {
-                const selectedForRemove = removeImageIds.includes(imageItem.id);
-                return (
-                  <div
-                    key={imageItem.id}
-                    className={`space-y-3 rounded-[0.5rem] border p-3 ${
-                      selectedForRemove ? "border-red-300 bg-red-50/60" : "border-[var(--border)] bg-[var(--muted)]"
-                    }`}
-                  >
-                    <div className="flex h-40 w-full items-center justify-center">
-                      <img
-                        src={imageItem.url}
-                        alt="기존 첨부 이미지"
-                        className="h-full w-full object-contain"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => toggleRemoveImage(imageItem.id)}
-                      className={`rounded-[5px] px-3 py-2 text-xs font-semibold ${
-                        selectedForRemove
-                          ? "border border-slate-300 bg-white text-slate-700"
-                          : "border border-red-200 bg-white text-red-600"
-                      }`}
-                    >
-                      {selectedForRemove ? "삭제 취소" : "이미지 삭제"}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
-        <label className="block space-y-2">
-          <span className="text-sm font-medium">이미지 추가 첨부</span>
-          <input
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={handleImageChange}
-            className="block w-full rounded-[5px] border border-[var(--border)] px-4 py-3 text-sm"
-          />
-        </label>
+        </div>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <div className="flex gap-3">
           <button

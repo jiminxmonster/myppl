@@ -3,7 +3,7 @@
 import type React from "react";
 import { useEffect, useState } from "react";
 
-import { getPostDetail, PostDetail, resolveMediaUrl } from "@/lib/api";
+import { getPostDetail, PostDetail } from "@/lib/api";
 import { CommentSection } from "@/components/board/comment-section";
 import { PostLikeButton } from "@/components/board/post-like-button";
 import { PostOwnerActions } from "@/components/board/post-owner-actions";
@@ -31,11 +31,37 @@ function renderPostContent(content: string) {
   );
 }
 
+function renderPostContentWithProductInfo(content: string, productInfo: React.ReactNode) {
+  if (!productInfo) {
+    return renderPostContent(content);
+  }
+
+  const firstImageMatch = content.match(/<img\b[^>]*>/i);
+  if (!firstImageMatch || firstImageMatch.index === undefined) {
+    return (
+      <>
+        {renderPostContent(content)}
+        {productInfo}
+      </>
+    );
+  }
+
+  const splitIndex = firstImageMatch.index + firstImageMatch[0].length;
+  const beforeProductInfo = content.slice(0, splitIndex);
+  const afterProductInfo = content.slice(splitIndex);
+
+  return (
+    <>
+      {renderPostContent(beforeProductInfo)}
+      {productInfo}
+      {renderPostContent(afterProductInfo)}
+    </>
+  );
+}
+
 export function PostDetailView({ slug, postId, initialPost }: PostDetailViewProps) {
   const [post, setPost] = useState(initialPost);
   const isProductPost = post.board_type === "product";
-  const primaryImage = post.images[0] ?? null;
-  const galleryImages = isProductPost ? post.images.slice(1) : post.images;
   const originalPrice = post.product_original_price ? Number(post.product_original_price).toLocaleString("ko-KR") : null;
   const salePrice = post.product_sale_price ? Number(post.product_sale_price).toLocaleString("ko-KR") : null;
   const isLiveSpecialPost = post.board_product_board_type === "live_special";
@@ -85,20 +111,11 @@ export function PostDetailView({ slug, postId, initialPost }: PostDetailViewProp
             <PostLikeButton postId={post.id} initialLikes={post.likes} />
           </div>
         </div>
-        {isProductPost ? (
-          <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="flex min-h-[320px] items-center justify-center rounded-[0.5rem] border border-[var(--border)] bg-[var(--muted)] p-4">
-              {primaryImage ? (
-                <img
-                  src={resolveMediaUrl(primaryImage.image)}
-                  alt={`${post.title} 상품 이미지`}
-                  className="h-full max-h-[420px] w-full object-contain"
-                />
-              ) : (
-                <span className="text-sm text-slate-500">이미지 없음</span>
-              )}
-            </div>
-            <aside className="space-y-4 rounded-[0.5rem] border border-[var(--border)] bg-slate-50 p-5">
+        <div className="mt-8 text-base leading-8 text-slate-800">
+          {renderPostContentWithProductInfo(
+            post.content,
+            isProductPost ? (
+              <aside className="my-6 space-y-4 rounded-[0.5rem] border border-[var(--border)] bg-slate-50 p-5">
               <p className="text-sm font-semibold text-slate-500">상품 정보</p>
               {originalPrice ? <p className="text-lg text-slate-400 line-through">₩{originalPrice}</p> : null}
               <p className="text-3xl font-black text-[var(--brand)]">{salePrice ? `₩${salePrice}` : "가격 문의"}</p>
@@ -143,29 +160,10 @@ export function PostDetailView({ slug, postId, initialPost }: PostDetailViewProp
               {liveActionUrl ? (
                 <ProductLiveActions title={post.title} liveUrl={liveActionUrl} buttonLabel={liveButtonLabel} />
               ) : null}
-            </aside>
-          </div>
-        ) : null}
-        <div className="mt-8 text-base leading-8 text-slate-800">{renderPostContent(post.content)}</div>
-        {galleryImages.length > 0 ? (
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
-            {galleryImages.map((image) => (
-              <a
-                key={image.id}
-                href={resolveMediaUrl(image.image)}
-                target="_blank"
-                rel="noreferrer"
-                className="flex h-72 items-center justify-center overflow-hidden rounded-[0.5rem] border border-[var(--border)] bg-[var(--muted)] p-3"
-              >
-                <img
-                  src={resolveMediaUrl(image.image)}
-                  alt={`${post.title} 첨부 이미지`}
-                  className="h-full w-full object-contain"
-                />
-              </a>
-            ))}
-          </div>
-        ) : null}
+              </aside>
+            ) : null
+          )}
+        </div>
       </article>
       <CommentSection postId={post.id} initialComments={post.comments} />
     </section>

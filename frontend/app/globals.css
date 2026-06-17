@@ -83,13 +83,29 @@ a {
   margin: 0.5em 0;
 }
 .tiptap-editor img {
-  display: inline;
+  display: block;
   max-width: 100%;
   height: auto;
-  vertical-align: middle;
-  margin: 0 2px;
+  margin: 0.75rem 0;
   border: 1px solid var(--border);
   border-radius: 4px;
+}
+.tiptap-editor p:has(img[data-main-exposure="true"])::before {
+  content: "메인노출";
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 6px;
+  border-radius: 4px;
+  background: var(--brand);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 4px 6px;
+}
+.tiptap-editor img[data-main-exposure="true"] {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 28%, transparent);
 }
 .tiptap-editor strong { font-weight: 700; }
 .tiptap-editor em { font-style: italic; }

@@ -20,6 +20,31 @@ type WritePageProps = {
   params: { slug: string };
 };
 
+const TextStyleWithFontSize = TextStyle.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      fontSize: {
+        default: null,
+        parseHTML: (element) => element.style.fontSize || null,
+        renderHTML: (attributes) => {
+          if (!attributes.fontSize) {
+            return {};
+          }
+          return { style: `font-size: ${attributes.fontSize}` };
+        },
+      },
+    };
+  },
+});
+
+const FONT_SIZE_OPTIONS = [
+  { label: "작게", value: "14px" },
+  { label: "기본", value: "16px" },
+  { label: "크게", value: "20px" },
+  { label: "매우 크게", value: "24px" },
+];
+
 export default function WritePage({ params }: WritePageProps) {
   const router = useRouter();
   const inlineImageInputRef = useRef<HTMLInputElement | null>(null);
@@ -37,7 +62,6 @@ export default function WritePage({ params }: WritePageProps) {
   const [productLiveBenefit, setProductLiveBenefit] = useState("");
   const [productLiveButtonLabel, setProductLiveButtonLabel] = useState("라이브 보기");
   const [images, setImages] = useState<FileList | null>(null);
-  const [mainRankingImage, setMainRankingImage] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -57,10 +81,10 @@ export default function WritePage({ params }: WritePageProps) {
         // We control some marks via separate extensions below
       }),
       Underline,
-      TextStyle,
+      TextStyleWithFontSize,
       Color,
       Image.configure({
-        inline: true,           // 핵심: 이미지를 인라인으로 취급 (텍스트처럼 Backspace/Enter 동작)
+        inline: false,          // 본문 삽입 이미지는 독립 블록으로 취급해 큰 이미지 주변 커서 스크롤 튐을 줄인다.
         allowBase64: false,
       }),
     ],
@@ -104,6 +128,34 @@ export default function WritePage({ params }: WritePageProps) {
 
   const [inlineImageUploading, setInlineImageUploading] = useState(false);
 
+  useEffect(() => {
+    if (!editor) {
+      return;
+    }
+
+    const markFirstImage = () => {
+      const imageNodes = Array.from(editor.view.dom.querySelectorAll("img"));
+      imageNodes.forEach((imageNode, index) => {
+        if (index === 0) {
+          imageNode.setAttribute("data-main-exposure", "true");
+          imageNode.setAttribute("title", "메인노출");
+        } else {
+          imageNode.removeAttribute("data-main-exposure");
+          imageNode.removeAttribute("title");
+        }
+      });
+    };
+
+    markFirstImage();
+    editor.on("update", markFirstImage);
+    editor.on("selectionUpdate", markFirstImage);
+
+    return () => {
+      editor.off("update", markFirstImage);
+      editor.off("selectionUpdate", markFirstImage);
+    };
+  }, [editor]);
+
   async function uploadAndInsertImageToEditor(file: File, ed: Editor | null) {
     if (!ed) return;
 
@@ -120,7 +172,7 @@ export default function WritePage({ params }: WritePageProps) {
       const uploaded = await uploadInlineImage(file);
       const imageUrl = resolveMediaUrl(uploaded.url); // /media/boards/inline/...
       // 인라인 이미지로 삽입 (Tiptap Image node)
-      ed.chain().focus().setImage({ src: imageUrl, alt: "본문 이미지" }).run();
+      preserveScroll(() => ed.chain().focus(undefined, { scrollIntoView: false }).setImage({ src: imageUrl, alt: "본문 이미지" }).run());
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "본문 이미지 업로드에 실패했습니다.");
     } finally {
@@ -166,7 +218,6 @@ export default function WritePage({ params }: WritePageProps) {
         title,
         content: finalContent,
         images,
-        main_ranking_image: isProductBoard ? mainRankingImage : null,
         product_original_price: isProductBoard ? productOriginalPrice : "",
         product_sale_price: isProductBoard ? productSalePrice : "",
         product_live_url: isProductBoard ? productLiveUrl.trim() : "",
@@ -186,6 +237,20 @@ export default function WritePage({ params }: WritePageProps) {
       setLoading(false);
     }
   };
+
+  function preserveScroll(action: () => void) {
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    action();
+    window.requestAnimationFrame(() => window.scrollTo(scrollX, scrollY));
+  }
+
+  function runEditorCommand(action: (ed: Editor) => void) {
+    if (!editor) {
+      return;
+    }
+    preserveScroll(() => action(editor));
+  }
 
   return (
     <section className="mx-auto max-w-4xl rounded-[0.67rem] border border-[var(--border)] bg-white/95 p-8 shadow-soft">
@@ -238,21 +303,9 @@ export default function WritePage({ params }: WritePageProps) {
                 onChange={(event) => setProductSalePrice(event.target.value)}
               />
             </label>
-            {isProductBoard && (
-              <label className="block space-y-2 md:col-span-2">
-                <span className="text-sm font-medium">메인 순위 노출용 이미지 (홈 상품 카드에 표시)</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setMainRankingImage(e.target.files?.[0] || null)}
-                  className="block w-full text-sm file:mr-4 file:rounded file:border file:bg-white file:px-3 file:py-1"
-                />
-                {mainRankingImage && (
-                  <span className="text-xs text-emerald-600">선택됨: {mainRankingImage.name} — 등록 시 메인 썸네일로 사용</span>
-                )}
-                <span className="text-[10px] text-slate-400">미지정 시 첫 번째 이미지 사용</span>
-              </label>
-            )}
+            <p className="text-xs text-slate-500 md:col-span-2">
+              본문에 삽입한 첫 번째 이미지가 메인 순위 노출 이미지로 사용됩니다. 에디터 안 첫 이미지에는 “메인노출” 표시가 붙습니다.
+            </p>
             {isLiveSpecialBoard ? (
               <LiveBroadcastFields
                 platform={productLivePlatform}
@@ -273,14 +326,14 @@ export default function WritePage({ params }: WritePageProps) {
             ) : null}
           </div>
         ) : null}
-        <label className="block space-y-2">
+        <div className="block space-y-2">
           <span className="text-sm font-medium">본문 (Rich Text — Tiptap)</span>
 
           {/* Toolbar: Bold / Italic / Underline / Strike / Color / Image insert */}
           <div className="flex flex-wrap items-center gap-1 rounded border border-[var(--border)] bg-white p-1">
             <button
               type="button"
-              onClick={() => editor?.chain().focus().toggleBold().run()}
+              onClick={() => runEditorCommand((ed) => ed.chain().focus(undefined, { scrollIntoView: false }).toggleBold().run())}
               className={`rounded px-2 py-1 text-xs font-semibold ${editor?.isActive("bold") ? "bg-[var(--brand)] text-white" : "hover:bg-[var(--muted)]"}`}
               title="굵게 (Bold)"
             >
@@ -288,7 +341,7 @@ export default function WritePage({ params }: WritePageProps) {
             </button>
             <button
               type="button"
-              onClick={() => editor?.chain().focus().toggleItalic().run()}
+              onClick={() => runEditorCommand((ed) => ed.chain().focus(undefined, { scrollIntoView: false }).toggleItalic().run())}
               className={`rounded px-2 py-1 text-xs italic ${editor?.isActive("italic") ? "bg-[var(--brand)] text-white" : "hover:bg-[var(--muted)]"}`}
               title="기울임 (Italic)"
             >
@@ -296,7 +349,7 @@ export default function WritePage({ params }: WritePageProps) {
             </button>
             <button
               type="button"
-              onClick={() => editor?.chain().focus().toggleUnderline().run()}
+              onClick={() => runEditorCommand((ed) => ed.chain().focus(undefined, { scrollIntoView: false }).toggleUnderline().run())}
               className={`rounded px-2 py-1 text-xs underline ${editor?.isActive("underline") ? "bg-[var(--brand)] text-white" : "hover:bg-[var(--muted)]"}`}
               title="밑줄 (Underline)"
             >
@@ -304,7 +357,7 @@ export default function WritePage({ params }: WritePageProps) {
             </button>
             <button
               type="button"
-              onClick={() => editor?.chain().focus().toggleStrike().run()}
+              onClick={() => runEditorCommand((ed) => ed.chain().focus(undefined, { scrollIntoView: false }).toggleStrike().run())}
               className={`rounded px-2 py-1 text-xs line-through ${editor?.isActive("strike") ? "bg-[var(--brand)] text-white" : "hover:bg-[var(--muted)]"}`}
               title="취소선 (Strike)"
             >
@@ -314,10 +367,33 @@ export default function WritePage({ params }: WritePageProps) {
             {/* Color picker */}
             <input
               type="color"
-              onChange={(e) => editor?.chain().focus().setColor(e.target.value).run()}
+              onChange={(e) => runEditorCommand((ed) => ed.chain().focus(undefined, { scrollIntoView: false }).setColor(e.target.value).run())}
               className="h-7 w-8 cursor-pointer rounded border border-[var(--border)] bg-white p-0.5"
               title="글자 색상"
             />
+
+            <select
+              defaultValue=""
+              onChange={(event) => {
+                const fontSize = event.target.value;
+                if (!fontSize) {
+                  return;
+                }
+                runEditorCommand((ed) => ed.chain().focus(undefined, { scrollIntoView: false }).setMark("textStyle", { fontSize }).run());
+                event.target.value = "";
+              }}
+              className="h-7 rounded border border-[var(--border)] bg-white px-2 text-xs"
+              title="글자 크기"
+            >
+              <option value="" disabled>
+                글자 크기
+              </option>
+              {FONT_SIZE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
 
             <div className="mx-1 h-4 w-px bg-[var(--border)]" />
 
@@ -338,7 +414,7 @@ export default function WritePage({ params }: WritePageProps) {
               {inlineImageUploading ? "업로드 중..." : "이미지 삽입"}
             </button>
             <span className="ml-2 text-[10px] text-slate-500">
-              드래그&amp;드롭 또는 붙여넣기로 이미지를 에디터 안에 바로 넣을 수 있습니다. (이미지는 인라인으로 동작)
+              드래그&amp;드롭 또는 붙여넣기로 이미지를 에디터 안에 바로 넣을 수 있습니다.
             </span>
           </div>
 
@@ -346,8 +422,8 @@ export default function WritePage({ params }: WritePageProps) {
           <div className="rounded-[5px] border border-[var(--border)] bg-white">
             <EditorContent editor={editor} />
           </div>
-          <p className="text-[10px] text-slate-400">글자 스타일 + 인라인 이미지 지원. Backspace로 이미지 삭제, Enter로 줄바꿈.</p>
-        </label>
+          <p className="text-[10px] text-slate-400">글자 스타일 + 본문 이미지 지원. Backspace로 이미지 삭제, Enter로 줄바꿈.</p>
+        </div>
 
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <button

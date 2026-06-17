@@ -1,3 +1,6 @@
+import re
+
+from django.core.files.storage import default_storage
 from rest_framework import serializers
 
 import bleach
@@ -29,6 +32,33 @@ def sanitize_post_content(html: str) -> str:
         strip=True,
     )
     return cleaned
+
+
+def extract_inline_media_urls(content: str) -> list[str]:
+    """본문에 등장한 이미지 URL을 화면 순서 그대로 중복 없이 반환한다."""
+    if not content:
+        return []
+
+    matches = re.findall(r'<img[^>]*src=["\'](/media/(?:posts|boards)/inline/[^"\']+)["\']', content)
+    matches += re.findall(r'!\[[^\]]*\]\((/media/(?:posts|boards)/inline/[^)]+)\)', content)
+
+    ordered_urls = []
+    seen = set()
+    for url in matches:
+        if url not in seen:
+            ordered_urls.append(url)
+            seen.add(url)
+    return ordered_urls
+
+
+def attach_inline_images_to_post(post: Post) -> None:
+    """본문 이미지들을 PostImage에 본문 등장 순서대로 연결한다."""
+    for url in extract_inline_media_urls(post.content or ""):
+        rel_path = url.replace("/media/", "")
+        if default_storage.exists(rel_path):
+            pi = PostImage(post=post)
+            pi.image.name = rel_path
+            pi.save()
 
 
 class BoardSerializer(serializers.ModelSerializer):
@@ -193,7 +223,10 @@ class PostListSerializer(serializers.ModelSerializer):
         return obj.title
 
     def get_thumbnail_image(self, obj):
-        """메인 순위 이미지가 있으면 우선 사용, 없으면 첫 번째 첨부 이미지를 목록용 썸네일로 사용한다."""
+        """본문 첫 이미지를 목록용 썸네일로 사용한다."""
+        inline_urls = extract_inline_media_urls(obj.content or "")
+        if inline_urls:
+            return inline_urls[0]
         if getattr(obj, "main_ranking_image", None):
             try:
                 return obj.main_ranking_image.url
@@ -327,20 +360,9 @@ class PostWriteSerializer(serializers.ModelSerializer):
         if main_ranking_image:
             post.main_ranking_image = main_ranking_image
             post.save()
-        # 본문에 포함된 inline 이미지(URL)도 Post.images에 연결 (HTML <img> 및 이전 markdown 둘 다 지원)
+        # 본문에 포함된 이미지도 Post.images에 화면 순서대로 연결한다.
         if post.content:
-            import re
-            from django.core.files.storage import default_storage
-            # New HTML format
-            html_matches = re.findall(r'<img[^>]*src=["\'](/media/boards/inline/[^"\']+)["\']', post.content or "")
-            # Legacy markdown support during transition
-            md_matches = re.findall(r'!\[[^\]]*\]\((/media/(?:posts|boards)/inline/[^)]+)\)', post.content or "")
-            for url in set(html_matches + md_matches):
-                rel_path = url.replace("/media/", "")
-                if default_storage.exists(rel_path):
-                    pi = PostImage(post=post)
-                    pi.image.name = rel_path
-                    pi.save()
+            attach_inline_images_to_post(post)
         for idx, link_data in enumerate(mall_links):
             PostMallLink.objects.create(post=post, sort_order=idx, **{k: v for k, v in link_data.items() if k != "id"})
         return post
@@ -381,16 +403,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
             instance.images.filter(image__startswith="posts/inline/").delete()
             instance.images.filter(image__startswith="boards/inline/").delete()  # 새 경로도 정리
             if instance.content:
-                import re
-                from django.core.files.storage import default_storage
-                html_matches = re.findall(r'<img[^>]*src=["\'](/media/boards/inline/[^"\']+)["\']', instance.content or "")
-                md_matches = re.findall(r'!\[[^\]]*\]\((/media/(?:posts|boards)/inline/[^)]+)\)', instance.content or "")
-                for url in set(html_matches + md_matches):
-                    rel_path = url.replace("/media/", "")
-                    if default_storage.exists(rel_path):
-                        pi = PostImage(post=instance)
-                        pi.image.name = rel_path
-                        pi.save()
+                attach_inline_images_to_post(instance)
         if mall_links is not None:
             instance.mall_links.all().delete()
             for idx, link_data in enumerate(mall_links):
