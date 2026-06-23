@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api";
 
-export default function LiveCreatePage() {
+function LiveCreateForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams?.get("edit");
@@ -100,5 +100,13 @@ export default function LiveCreatePage() {
       </form>
       <p className="text-xs text-slate-500 mt-3">* 1차에서는 외부 URL만 사용합니다. 판매자 계정으로 로그인 후 이용하세요.</p>
     </div>
+  );
+}
+
+export default function LiveCreatePage() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-xl p-6">방송 작성 화면을 불러오는 중입니다.</div>}>
+      <LiveCreateForm />
+    </Suspense>
   );
 }
