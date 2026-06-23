@@ -106,7 +106,7 @@ class HomeProductSectionConfigAdmin(admin.ModelAdmin):
 
 @admin.register(SiteDisplaySetting)
 class SiteDisplaySettingAdmin(admin.ModelAdmin):
-    list_display = ("show_side_category_menu", "updated_at")
+    list_display = ("show_side_category_menu", "show_live_menu", "updated_at")
 
 
 @admin.register(HomeHeroSlide)

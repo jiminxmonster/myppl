@@ -16,6 +16,7 @@ urlpatterns = [
     path("api/v1/", include("apps.marketplace.urls")),
     path("api/v1/", include("apps.notifications.urls")),
     path("api/v1/", include("apps.payments.urls")),
+    path("api/v1/live/", include("apps.live.urls")),
 ]
 
 def serve_media_file(request, file_path: str):

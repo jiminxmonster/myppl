@@ -1,6 +1,13 @@
 from django.urls import path
 
-from .admin_views import AdminBoardDetailView, AdminBoardListCreateView, AdminBoardReorderView, AdminBoardToggleVisibilityView
+from .admin_views import (
+    AdminBoardDetailView,
+    AdminBoardListCreateView,
+    AdminBoardReorderView,
+    AdminBoardToggleVisibilityView,
+    ProductSourcingSearchView as AdminProductSourcingSearchView,
+    ProductSourcingImportView as AdminProductSourcingImportView,
+)
 from .search_views import PopularSearchKeywordView, UnifiedSearchView
 from .views import (
     AdminPostBlindView,
@@ -42,6 +49,9 @@ urlpatterns = [
     path("admin/keywords/<int:keyword_id>/", AdminKeywordFilterDetailView.as_view(), name="admin_keyword_detail"),
     path("admin/reports/", AdminReportListView.as_view(), name="admin_report_list"),
     path("admin/reports/<int:report_id>/handle/", AdminReportHandleView.as_view(), name="admin_report_handle"),
+    # 상품소싱 (1차 구현: Mock Provider + 등록 플로우)
+    path("admin/product-sourcing/search/", AdminProductSourcingSearchView.as_view(), name="product_sourcing_search"),
+    path("admin/product-sourcing/import/", AdminProductSourcingImportView.as_view(), name="product_sourcing_import"),
     path("boards/<str:slug>/posts/", PostListCreateView.as_view(), name="post_list_create"),
     path("search/popular-keywords/", PopularSearchKeywordView.as_view(), name="popular_search_keywords"),
     path("search/", UnifiedSearchView.as_view(), name="unified_search"),

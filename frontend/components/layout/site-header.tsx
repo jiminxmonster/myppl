@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogIn, Settings, User } from "lucide-react";
 
-import { BoardItem, getBoards } from "@/lib/api";
+import { BoardItem, getBoards, getSiteDisplaySettings } from "@/lib/api";
 import { NotificationDropdown } from "@/components/layout/notification-dropdown";
 import { SearchBar } from "@/components/layout/search-bar";
 import { useAuthStore } from "@/store/authStore";
@@ -65,6 +65,7 @@ export function SiteHeader() {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const user = useAuthStore((state) => state.user);
   const [boards, setBoards] = useState<BoardItem[]>(fallbackTopBoards);
+  const [siteSettings, setSiteSettings] = useState<{ show_live_menu: boolean }>({ show_live_menu: false });
   const isOperator = ["moderator", "admin", "superadmin"].includes(user?.operator_role ?? "");
 
   const noticeBoard = boards.find((board) => board.slug === "notice");
@@ -108,6 +109,16 @@ export function SiteHeader() {
     };
 
     void loadBoards();
+
+    const loadSiteSettings = async () => {
+      try {
+        const s = await getSiteDisplaySettings();
+        if (mounted) setSiteSettings({ show_live_menu: !!s.show_live_menu });
+      } catch {
+        if (mounted) setSiteSettings({ show_live_menu: false });
+      }
+    };
+    void loadSiteSettings();
 
     const handleBoardUpdate = () => {
       void loadBoards();
@@ -197,6 +208,11 @@ export function SiteHeader() {
               {noticeBoard ? (
                 <Link href={`/boards/${noticeBoard.slug}`} className="rounded-[5px] px-4 py-2 hover:bg-[var(--muted)]">
                   공지
+                </Link>
+              ) : null}
+              {siteSettings.show_live_menu ? (
+                <Link href="/live" className="rounded-[5px] px-4 py-2 hover:bg-[var(--muted)] font-semibold">
+                  방송
                 </Link>
               ) : null}
             </nav>

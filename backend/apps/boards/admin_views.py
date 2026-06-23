@@ -9,7 +9,8 @@ from apps.admin_logs.models import AdminLog
 from apps.admin_logs.services import create_admin_log
 
 from .admin_serializers import AdminBoardSerializer
-from .models import Board
+from .models import Board, Post, PostImage
+from .product_sourcing import MockProductSourcingProvider, ProductSourcingProvider
 
 
 class AdminBoardListCreateView(generics.ListCreateAPIView):
@@ -117,3 +118,108 @@ class AdminBoardToggleVisibilityView(APIView):
             ip_address=request.META.get("REMOTE_ADDR"),
         )
         return response.Response({"is_visible": board.is_visible}, status=status.HTTP_200_OK)
+
+
+def get_sourcing_provider(name: str) -> ProductSourcingProvider:
+    """1차 구현: mock provider만 반환"""
+    return MockProductSourcingProvider()
+
+
+class ProductSourcingSearchView(APIView):
+    """관리자 상품 소싱 검색 (1차: Mock)"""
+
+    permission_classes = [IsAdminOrModerator]
+
+    def post(self, request):
+        provider_name = request.data.get("provider", "mock")
+        keyword = (request.data.get("keyword") or "").strip()
+        page = int(request.data.get("page", 1))
+        limit = min(int(request.data.get("limit", 20)), 50)
+
+        if not keyword:
+            return response.Response({"results": []})
+
+        provider = get_sourcing_provider(provider_name)
+        results = provider.search(keyword, page=page, limit=limit)
+        return response.Response({"results": results})
+
+
+class ProductSourcingImportView(APIView):
+    """선택 상품을 게시글로 등록 (이미지 다운로드 + Tiptap HTML)"""
+
+    permission_classes = [IsAdminOrModerator]
+
+    def post(self, request):
+        board_slug = request.data.get("board_slug")
+        items = request.data.get("items", [])
+
+        if not board_slug or not items:
+            return response.Response({"detail": "board_slug와 items가 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        board = get_object_or_404(Board, slug=board_slug)
+        provider = get_sourcing_provider("mock")  # 1차는 mock
+
+        created = []
+        failed = []
+
+        for item in items:
+            try:
+                title = item.get("title") or "상품"
+                image_url = item.get("image_url") or ""
+                internal_image = provider.download_image_to_media(image_url) if image_url else None
+
+                if not internal_image:
+                    # 이미지 없거나 실패 시 placeholder 또는 실패 처리
+                    internal_image = "/placeholders/market-default.svg"
+
+                # Tiptap HTML 구조 (기존 에디터 호환)
+                html_content = f"""<p>외부 상품 소싱으로 등록된 상품입니다.</p>
+<img src="{internal_image}" alt="{title}">
+<p>상품명: {title}</p>
+<p>쇼핑몰: {item.get('store_name', '')}</p>
+<p>가격: {item.get('sale_price', 0):,}원 (원가 {item.get('original_price', 0):,}원)</p>
+<p><a href="{item.get('product_url', '#')}" target="_blank" rel="noopener">쇼핑몰에서 보기</a></p>"""
+
+                post = Post.objects.create(
+                    board=board,
+                    author=request.user,
+                    title=title[:200],
+                    content=html_content,
+                )
+
+                # set product fields via update to avoid schema mismatch (no DB change)
+                update_fields = []
+                for fld, val in [
+                    ("product_original_price", item.get("original_price")),
+                    ("product_sale_price", item.get("sale_price")),
+                    ("product_store_name", (item.get("store_name") or "")[:80]),
+                    ("product_live_url", (item.get("product_url") or "")[:500]),
+                ]:
+                    if val not in (None, ""):
+                        setattr(post, fld, val)
+                        update_fields.append(fld)
+                if update_fields:
+                    post.save(update_fields=update_fields)
+
+                # PostImage 생성 → 첫 이미지 = 썸네일/메인 순위
+                if internal_image and not internal_image.startswith("/placeholders"):
+                    rel = internal_image.replace("/media/", "", 1)
+                    pi = PostImage(post=post)
+                    pi.image.name = rel
+                    pi.save()
+
+                created.append({
+                    "post_id": post.id,
+                    "title": post.title,
+                    "url": f"/boards/{board.slug}/{post.id}",
+                })
+
+                # log omitted to avoid unknown action constant in 1차
+                pass
+            except Exception as e:
+                failed.append({"external_id": item.get("external_id"), "title": item.get("title"), "error": str(e)})
+
+        return response.Response({
+            "created": created,
+            "failed": failed,
+        }, status=status.HTTP_200_OK)

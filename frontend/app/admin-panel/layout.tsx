@@ -26,6 +26,11 @@ const policyManagementItems = [
   { href: "/admin-panel/logs", label: "운영 로그" },
 ];
 
+const productOperationItems = [
+  { href: "/admin-panel/product-sourcing", label: "상품소싱" },
+  { href: "/admin-panel/live", label: "방송관리" },
+];
+
 export default function AdminPanelLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -69,6 +74,25 @@ export default function AdminPanelLayout({ children }: { children: React.ReactNo
       <div className="space-y-2">
         <p className="px-1 text-xs font-bold tracking-wide text-slate-500">정책관리</p>
         {policyManagementItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={() => setMobileMenuOpen(false)}
+            className={`block rounded-[5px] border px-4 py-3 text-sm font-semibold transition ${
+              pathname === item.href
+                ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                : "border-[var(--border)] text-slate-700 hover:bg-[var(--muted)]"
+            }`}
+            aria-pressed={pathname === item.href}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
+
+      <div className="space-y-2">
+        <p className="px-1 text-xs font-bold tracking-wide text-slate-500">상품운영</p>
+        {productOperationItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}

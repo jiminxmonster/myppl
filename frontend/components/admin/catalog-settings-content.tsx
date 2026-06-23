@@ -1379,6 +1379,7 @@ export function AdminCatalogPageContent({ mode }: { mode: "ranking" | "filters" 
             {siteSettings?.show_side_category_menu ? "켜짐" : "꺼짐"}
           </button>
         </div>
+
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-[var(--ink)]">홈 가로형 상품 탭</h2>

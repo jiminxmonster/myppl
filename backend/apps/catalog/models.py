@@ -238,6 +238,7 @@ class SiteDisplaySetting(models.Model):
     """사이트 화면 노출 설정."""
 
     show_side_category_menu = models.BooleanField("좌측 녹색 카테고리 메뉴 노출", default=False)
+    show_live_menu = models.BooleanField("방송 메뉴 노출", default=False)
     updated_at = models.DateTimeField("수정일", auto_now=True)
 
     class Meta:
@@ -249,7 +250,9 @@ class SiteDisplaySetting(models.Model):
 
     @classmethod
     def get_solo(cls):
-        setting, _ = cls.objects.get_or_create(id=1, defaults={"show_side_category_menu": False})
+        setting, _ = cls.objects.get_or_create(
+            id=1, defaults={"show_side_category_menu": False, "show_live_menu": False}
+        )
         return setting
 
 

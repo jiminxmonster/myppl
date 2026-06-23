@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "apps.hotdeals",
     "apps.marketplace",
     "apps.notifications",
+    "apps.live",
     "apps.payments",
 ]
 

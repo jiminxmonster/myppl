@@ -94,7 +94,7 @@ class HomeBoardSectionConfigSerializer(serializers.ModelSerializer):
 class SiteDisplaySettingSerializer(serializers.ModelSerializer):
     class Meta:
         model = SiteDisplaySetting
-        fields = ("show_side_category_menu", "updated_at")
+        fields = ("show_side_category_menu", "show_live_menu", "updated_at")
         read_only_fields = ("updated_at",)
 
 

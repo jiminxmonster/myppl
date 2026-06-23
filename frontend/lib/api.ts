@@ -14,7 +14,7 @@ export function getApiBaseUrl() {
   return publicApiUrl || "http://localhost:8000/api/v1";
 }
 
-const apiClient = axios.create({
+export const apiClient = axios.create({
   baseURL: getApiBaseUrl()
 });
 
@@ -684,6 +684,7 @@ export type HomeBoardSectionConfig = {
 
 export type SiteDisplaySettings = {
   show_side_category_menu: boolean;
+  show_live_menu: boolean;
   updated_at: string;
 };
 
