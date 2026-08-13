@@ -139,7 +139,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "node -e \"fetch('http://127.0.0.1:3000').then((res)=>process.exit(res.ok?0:1)).catch(()=>process.exit(1))\"",
+          "node -e \"const base=process.env.NEXT_PUBLIC_BASE_PATH||''; fetch('http://127.0.0.1:3000'+base).then((res)=>process.exit(res.ok?0:1)).catch(()=>process.exit(1))\"",
         ]
       interval: 20s
       timeout: 10s
