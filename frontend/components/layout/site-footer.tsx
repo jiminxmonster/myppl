@@ -35,6 +35,12 @@ export function SiteFooter() {
           <p className="mt-5 max-w-lg break-keep text-sm leading-7 text-slate-600">
             MYPPL은 판매자와 소비자가 좋은 상품 정보를 공유하고, 합리적인 홍보와 발견을 연결하는 커뮤니티형 상품 플랫폼입니다.
           </p>
+          <address className="mt-5 space-y-1 not-italic text-xs leading-6 text-slate-500">
+            <p className="font-semibold text-slate-700">트윈컴퍼니 · 대표 박진우</p>
+            <p>서울특별시 용산구 청파로 48, 용산전자오피스텔 407호~408호</p>
+            <p>T. 02-3275-3811 · F. 02-3275-3812 · M. 010-5248-0918</p>
+            <p>E. jinu1026@naver.com</p>
+          </address>
           <div className="mt-6 flex flex-wrap gap-2">
             {[
               { label: "instagram", icon: Instagram },
@@ -97,7 +103,7 @@ export function SiteFooter() {
       </div>
 
       <div className="mt-10 flex flex-col gap-4 border-t border-[var(--border)] pt-6 text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
-        <p>© 2026 MYPPL. All rights reserved.</p>
+        <p>© 2026 MYPPL. All rights reserved. · 트윈컴퍼니</p>
         <button
           type="button"
           className="inline-flex w-fit items-center gap-2 rounded-[5px] border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-slate-700"
