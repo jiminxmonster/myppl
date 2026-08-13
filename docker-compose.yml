@@ -120,6 +120,7 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
         NEXT_INTERNAL_API_URL: ${NEXT_INTERNAL_API_URL:-}
         NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
     # 프로덕션: Dockerfile CMD (npm start) 사용. dev 모드 강제 주석 처리 (안정성)
     # command: npm run dev   # 로컬 개발 시에만 임시 사용
     ulimits:

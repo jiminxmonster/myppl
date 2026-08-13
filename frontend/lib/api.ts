@@ -241,11 +241,17 @@ export function resolveMediaUrl(path: string) {
     return path;
   }
 
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH?.replace(/\/$/, "") || "";
+
   // For any path that is already a clean root-relative media path (the common case
   // for body images we insert as ![...](/media/posts/inline/xxx.png)), return it
   // as-is. This guarantees identical output on server (SSR) and client (hydration),
   // preventing "Text content does not match server-rendered HTML" errors.
   if (path.startsWith("/media/")) {
+    return `${basePath}${path}`;
+  }
+
+  if (basePath && path.startsWith(`${basePath}/media/`)) {
     return path;
   }
 
@@ -263,7 +269,7 @@ export function resolveMediaUrl(path: string) {
       if ((mediaUrl.hostname === "localhost" || mediaUrl.hostname === "127.0.0.1" || mediaUrl.hostname === "34.22.96.236") && mediaUrl.pathname.startsWith("/media/")) {
         // Force correct port for VM (8080 via nginx) or local.
         // Note: we still prefer to return a root-relative path when possible for hydration stability.
-        return mediaUrl.pathname + mediaUrl.search;
+        return `${basePath}${mediaUrl.pathname}${mediaUrl.search}`;
       }
     } catch {
       return path;
@@ -283,7 +289,7 @@ export function resolveMediaUrl(path: string) {
 
   // Return as root-relative path when we can (best for hydration).
   // Only prefix with origin for truly external or special cases.
-  return mediaPath;
+  return `${basePath}${mediaPath}`;
 }
 
 export function getProductPlaceholder(type: "hotdeal" | "marketplace", categoryName?: string | null) {
