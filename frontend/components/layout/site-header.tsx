@@ -60,6 +60,8 @@ function getTopMenuLabel(board: BoardItem) {
   return board.name;
 }
 
+const withBasePath = (path: string) => `${process.env.NEXT_PUBLIC_BASE_PATH || ""}${path}`;
+
 export function SiteHeader() {
   const pathname = usePathname();
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
@@ -150,7 +152,7 @@ export function SiteHeader() {
           <div>
             <Link href="/" className="inline-flex items-center">
               <img
-                src="/branding/ppl_b.svg"
+                src={withBasePath("/branding/ppl_b.svg")}
                 alt="myppl"
                 className="h-auto w-[110px] max-w-full"
               />

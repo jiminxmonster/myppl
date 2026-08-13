@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ChevronDown, Instagram, Mail, MessageCircle, Youtube } from "lucide-react";
 
+const withBasePath = (path: string) => `${process.env.NEXT_PUBLIC_BASE_PATH || ""}${path}`;
+
 const quickLinks = [
   { label: "서비스 소개", href: "/" },
   { label: "상품게시판", href: "/boards/seller-hot-issues" },
@@ -28,7 +30,7 @@ export function SiteFooter() {
       <div className="grid gap-8 md:grid-cols-[1.35fr_0.85fr_1fr_1fr_1fr] lg:gap-10">
         <div className="max-w-xl">
           <Link href="/" className="inline-flex items-center">
-            <img src="/branding/ppl_b.svg" alt="myppl" className="h-auto w-[90px] max-w-full" />
+            <img src={withBasePath("/branding/ppl_b.svg")} alt="myppl" className="h-auto w-[90px] max-w-full" />
           </Link>
           <p className="mt-5 max-w-lg break-keep text-sm leading-7 text-slate-600">
             MYPPL은 판매자와 소비자가 좋은 상품 정보를 공유하고, 합리적인 홍보와 발견을 연결하는 커뮤니티형 상품 플랫폼입니다.

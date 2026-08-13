@@ -250,7 +250,7 @@ export function TopCategoryIconMenu({
             }`}
           >
             <SafeImage
-              src="/branding/promotion_001.png"
+              src={`${basePath ? process.env.NEXT_PUBLIC_BASE_PATH || "" : ""}/branding/promotion_001.png`}
               alt="전체 카테고리"
               className="h-full w-full object-cover"
               seed="category-all"
